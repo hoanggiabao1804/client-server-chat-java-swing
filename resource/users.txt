@@ -1,0 +1,4 @@
+id\name\username\password\email\dob\gender\createdAt
+019d7869-8821-7da1-9f04-53ff53d972dd\admin\admin\admin\admin@example.com\01-01-2000\MALE\20-03-2020
+727dfee5-0591-447d-bef0-5ee0f56089f5\Hoàng Bảo\bao123\bao123\bao123@gmail.com\02-01-2005\MALE\17-04-2026
+62c40b75-a24a-4aa1-821a-bd9c61e4229a\Nguyễn Văn An\an123\an123\an0305@gmail.com\04-05-2005\MALE\17-04-2026
