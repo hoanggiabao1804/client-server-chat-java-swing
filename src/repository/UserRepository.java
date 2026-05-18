@@ -11,17 +11,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
 import domain.User;
 import util.Parser;
 
 public class UserRepository implements Repository {
 
     private static UserRepository userRepository = null;
+    private final ObjectMapper objectMapper;
 
     private static final Map<String, User> storage = new HashMap<>();
     private static final Map<String, User> usernameIndexedStorage = new HashMap<>();
 
     private UserRepository() {
+        this.objectMapper = new ObjectMapper();
+        objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
     }
 
     public static UserRepository getInstance() {
@@ -87,15 +93,15 @@ public class UserRepository implements Repository {
         }
     }
 
-    public List<Object> findAll() {
+    public List<User> findAll() {
         return new ArrayList<>(storage.values());
     }
 
-    public Object findById(String id) {
+    public User findById(String id) {
         return storage.get(id);
     }
 
-    public Object findByUsername(String username) {
+    public User findByUsername(String username) {
         return usernameIndexedStorage.get(username);
     }
 
@@ -103,28 +109,27 @@ public class UserRepository implements Repository {
         return storage.containsKey(id);
     }
 
-    public Object save(Object user) {
-        User castedUser = (User) user;
-        String id = castedUser.getId().toString();
+    public User save(User user) {
+        String id = user.getId().toString();
 
         if (storage.containsKey(id)) {
             User currentUser = storage.get(id);
 
-            currentUser.setName(castedUser.getName());
-            currentUser.setUsername(castedUser.getUsername());
-            currentUser.setPassword(castedUser.getPassword());
-            currentUser.setEmail(castedUser.getEmail());
-            currentUser.setDob(castedUser.getDob());
-            currentUser.setGender(castedUser.getGender());
-            currentUser.setCreatedAt(castedUser.getCreatedAt());
+            currentUser.setName(user.getName());
+            currentUser.setUsername(user.getUsername());
+            currentUser.setPassword(user.getPassword());
+            currentUser.setEmail(user.getEmail());
+            currentUser.setDob(user.getDob());
+            currentUser.setGender(user.getGender());
+            currentUser.setCreatedAt(user.getCreatedAt());
 
             return currentUser;
         }
 
-        storage.put(id, castedUser);
-        usernameIndexedStorage.put(castedUser.getUsername(), castedUser);
+        storage.put(id, user);
+        usernameIndexedStorage.put(user.getUsername(), user);
 
-        return castedUser;
+        return user;
     }
 
     public void deleteById(String id) {
