@@ -19,7 +19,7 @@ public class Authentication {
     }
 
     public String authenticate(String username, String password) {
-        User foundUser = (User) UserRepository.getInstance().findByUsername(username);
+        User foundUser = UserRepository.getInstance().findByUsername(username);
         if (foundUser == null) {
             return "Không tìm thấy người dùng.";
         }
