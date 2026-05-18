@@ -5,14 +5,13 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
-import java.util.List;
 
 import javax.swing.JPanel;
 import javax.swing.border.LineBorder;
 
 import component.AppContext;
 import component.AppFrame;
-import domain.User;
+import domain.Dialog;
 
 public class MainMenu implements AppContext {
 
@@ -28,6 +27,7 @@ public class MainMenu implements AppContext {
 
 	private Sidebar sidebar;
 	private NavigationBar navigationBar;
+	private UserDialog userDialog;
 
 	public MainMenu(Container parent) {
 		this.parent = parent;
@@ -38,7 +38,6 @@ public class MainMenu implements AppContext {
 		bodyContainer = new JPanel();
 		mainContainer = (JPanel) homePage.getRootComponent();
 		sidebar = new Sidebar(this.rootContainer, new Dimension(350, size.height - 70));
-		sidebar.init();
 		sidebarContainer = (JPanel) sidebar.getRootComponent();
 
 		navigationBar = new NavigationBar(this.rootContainer, new Dimension(size.width, 70));
@@ -62,15 +61,17 @@ public class MainMenu implements AppContext {
 	}
 
 	public void loadUser() {
+		sidebar.loadUser();
 		navigationBar.loadUser();
 		UserProfile userProfile = (UserProfile) AppFrame.getInstance().getContextPools().getContext("userProfile");
 		userProfile.loadUser();
 	}
 
-	public void loadDialogDetail(User user) {
+	public void loadDialogDetail(Dialog dialog) {
 		bodyContainer.remove(mainContainer);
-		UserDialog userDialog = new UserDialog(this.rootContainer, new Dimension(1130, size.height - 70),
-				List.of(user));
+		userDialog = new UserDialog(this.rootContainer, new Dimension(1130, size.height - 70));
+		userDialog.loadUser();
+		userDialog.loadDialog(dialog);
 		mainContainer = (JPanel) userDialog.getRootComponent();
 		bodyContainer.add(mainContainer);
 		bodyContainer.revalidate();
