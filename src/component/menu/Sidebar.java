@@ -6,11 +6,13 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -67,8 +69,8 @@ public class Sidebar implements AppContext {
         this.size = size;
 
         // Font & Color
-        this.headerFont = new Font("Consolas", Font.BOLD, 20);
-        this.tabFont = new Font("Consolas", Font.BOLD, 15);
+        this.headerFont = new Font("Consolas", Font.BOLD, 30);
+        this.tabFont = new Font("Consolas", Font.BOLD, 20);
         this.textFont = new Font("Consolas", Font.PLAIN, 15);
         this.sidebarColor = new Color(0, 129, 138);
 
@@ -96,13 +98,15 @@ public class Sidebar implements AppContext {
 
         // Body initialization
         scrollPane = new JScrollPane(bodyContainer);
-        dialogTabList = new ArrayList<>();
+        dialogTabList = this.userPool.values().stream().map(item -> {
+            return createDialogTabPanel(item);
+        }).collect(Collectors.toList());
         selectedUser = null;
         selectedDialogTab = null;
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridwidth = GridBagConstraints.REMAINDER;
-        // gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         // Root container section
         sidebarContainer.setLayout(new GridBagLayout());
@@ -120,13 +124,15 @@ public class Sidebar implements AppContext {
 
         headerLabel.setText("Đoạn chat");
         headerLabel.setFont(this.headerFont);
+        headerLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
 
         searchContainer.setLayout(new FlowLayout());
         searchContainer.setPreferredSize(new Dimension(size.width - 20, 45));
+        searchContainer.setBackground(Color.white);
         searchContainer.add(searchTextField);
         searchContainer.add(searchButton);
 
-        searchTextField.setPreferredSize(new Dimension(size.width - 20, 35));
+        searchTextField.setPreferredSize(new Dimension(size.width - 90, 35));
         searchTextField.setFont(this.textFont);
         searchTextField.setBackground(Color.white);
         searchTextField.setForeground(Color.black);
@@ -164,7 +170,7 @@ public class Sidebar implements AppContext {
 
     private JPanel createDialogTabPanel(User user) {
         JPanel rootPanel = new JPanel();
-        JButton avatarButton = new JButton();
+        RoundButton avatarButton = new RoundButton();
         ImageIcon avatarIcon = new ImageIcon("assets/user-round.png");
         JPanel contentPanel = new JPanel();
         JLabel nameLabel = new JLabel();
@@ -190,6 +196,9 @@ public class Sidebar implements AppContext {
                     selectedDialogTab = rootPanel;
                     selectedDialogTab.setBackground(Color.blue);
                 }
+
+                MainMenu mainMenu = (MainMenu) AppFrame.getInstance().getContextPools().getContext("mainMenu");
+                mainMenu.loadDialogDetail(user);
             }
 
             public void mouseEntered(MouseEvent e) {
@@ -211,12 +220,12 @@ public class Sidebar implements AppContext {
         avatarButton.setFocusable(false);
 
         contentPanel.setLayout(new FlowLayout());
-        contentPanel.setPreferredSize(new Dimension(this.size.width - 60, 100));
+        contentPanel.setPreferredSize(new Dimension(this.size.width - 80, 100));
         contentPanel.setBackground(Color.white);
         contentPanel.add(nameLabel);
         contentPanel.add(lastMessageLabel);
 
-        Dimension labelSize = new Dimension(this.size.width - 60, 30);
+        Dimension labelSize = new Dimension(this.size.width - 80, 30);
 
         nameLabel.setPreferredSize(labelSize);
         nameLabel.setText(user.getName());
@@ -273,8 +282,14 @@ public class Sidebar implements AppContext {
             return createDialogTabPanel(item);
         }).collect(Collectors.toList());
 
+        if (dialogTabList.size() > 0) {
+            for (int i = 0; i < 10; ++i) {
+                dialogTabList.add(createDialogTabPanel(searchedUsers.get(0)));
+            }
+        }
+
         bodyContainer.removeAll();
-        bodyContainer.setPreferredSize(new Dimension(size.width - 20, dialogTabList.size() * 100));
+        bodyContainer.setPreferredSize(new Dimension(size.width - 20, dialogTabList.size() * 115));
         dialogTabList.forEach(item -> bodyContainer.add(item));
     }
 
@@ -305,5 +320,53 @@ public class Sidebar implements AppContext {
     public Dimension getSize() {
         return this.size;
     }
+}
 
+// Custom button
+class RoundButton extends JButton {
+
+    public RoundButton() {
+        super();
+
+        setFocusPainted(false);
+        setContentAreaFilled(false);
+        setBorderPainted(false);
+    }
+
+    public RoundButton(String label) {
+        super(label);
+
+        setFocusPainted(false);
+        setContentAreaFilled(false);
+        setBorderPainted(false);
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g.create();
+
+        // Smooth edges
+        g2.setRenderingHint(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Background
+        g2.setColor(this.getBackground());
+
+        // Round corners
+        g2.fillOval(0, 0, getWidth(), getHeight());
+
+        super.paintComponent(g2);
+        g2.dispose();
+    }
+
+    @Override
+    protected void paintBorder(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g.create();
+
+        g2.setColor(Color.BLACK);
+        g2.drawOval(0, 0, getWidth() - 1, getHeight() - 1);
+
+        g2.dispose();
+    }
 }
