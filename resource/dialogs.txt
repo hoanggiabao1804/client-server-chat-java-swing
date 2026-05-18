@@ -1,0 +1,9 @@
+[ {
+  "id" : "148e2753-dde5-49a6-bab3-1b7a855a03ff",
+  "name" : "admin",
+  "participants" : [ "019d7869-8821-7da1-9f04-53ff53d972dd" ]
+}, {
+  "id" : "21083c43-2d89-4cb5-92a7-f977e561e6d0",
+  "name" : "Hoàng Bảo",
+  "participants" : [ "019d7869-8821-7da1-9f04-53ff53d972dd", "727dfee5-0591-447d-bef0-5ee0f56089f5" ]
+} ]
