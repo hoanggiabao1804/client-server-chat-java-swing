@@ -46,7 +46,7 @@ public class RegisterForm implements AppContext {
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
     private final Map<String, GenderEnum> genderMap1 = new HashMap<>(
             Map.of("Nam", GenderEnum.MALE, "Nữ", GenderEnum.FEMALE, "Khác", GenderEnum.OTHER));
-    private User librarian;
+    private User user;
 
     // Font & Color
     private Font welcomeLabelFont;
@@ -136,7 +136,7 @@ public class RegisterForm implements AppContext {
 
     public RegisterForm(Container parent) {
         this.parent = parent;
-        this.librarian = new User();
+        this.user = new User();
 
         // Font & Color
         welcomeLabelFont = new Font("Consolas", Font.BOLD, 30);
@@ -640,14 +640,14 @@ public class RegisterForm implements AppContext {
             }
 
             if (!hasError) {
-                librarian.setId(UUID.randomUUID());
-                librarian.setName(nameTextField.getText().strip());
-                librarian.setUsername(usernameTextField.getText().strip());
-                librarian.setPassword(password.strip());
-                librarian.setEmail(emailTextField.getText().strip());
-                librarian.setDob(selectedDate);
-                librarian.setGender(genderMap1.get(genderComboBox.getSelectedItem()));
-                librarian.setCreatedAt(LocalDate.now());
+                user.setId(UUID.randomUUID());
+                user.setName(nameTextField.getText().strip());
+                user.setUsername(usernameTextField.getText().strip());
+                user.setPassword(password.strip());
+                user.setEmail(emailTextField.getText().strip());
+                user.setDob(selectedDate);
+                user.setGender(genderMap1.get(genderComboBox.getSelectedItem()));
+                user.setCreatedAt(LocalDate.now());
 
                 String registerResult = register();
 
@@ -686,18 +686,18 @@ public class RegisterForm implements AppContext {
     }
 
     private String register() {
-        User foundUser = (User) UserRepository.getInstance().findByUsername(librarian.getUsername());
+        User foundUser = UserRepository.getInstance().findByUsername(user.getUsername());
         if (foundUser != null) {
             return "Người dùng đã tồn tại.";
         }
 
-        UserRepository.getInstance().save(this.librarian);
+        UserRepository.getInstance().save(this.user);
 
         return "";
     }
 
     public void reset() {
-        this.librarian = new User();
+        this.user = new User();
         this.nameTextField.setText("");
         this.nameErrorLabel.setVisible(false);
         this.usernameTextField.setText("");
