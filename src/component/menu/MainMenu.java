@@ -5,17 +5,19 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.util.List;
 
 import javax.swing.JPanel;
 import javax.swing.border.LineBorder;
 
 import component.AppContext;
 import component.AppFrame;
+import domain.User;
 
 public class MainMenu implements AppContext {
 
 	private final Container parent;
-	private final Dimension size = new Dimension(960, 640);
+	private final Dimension size = new Dimension(1480, 960);
 
 	// Containers section
 	private JPanel rootContainer;
@@ -31,15 +33,15 @@ public class MainMenu implements AppContext {
 		this.parent = parent;
 
 		// Container initialization
-		HomePage homePage = new HomePage(this.rootContainer, new Dimension(760, 560));
+		HomePage homePage = new HomePage(this.rootContainer, new Dimension(1130, size.height - 70));
 		rootContainer = new JPanel();
 		bodyContainer = new JPanel();
 		mainContainer = (JPanel) homePage.getRootComponent();
-		sidebar = new Sidebar(this.rootContainer, new Dimension(200, size.height - 80));
+		sidebar = new Sidebar(this.rootContainer, new Dimension(350, size.height - 70));
 		sidebar.init();
 		sidebarContainer = (JPanel) sidebar.getRootComponent();
 
-		navigationBar = new NavigationBar(this.rootContainer, new Dimension(size.width, 80));
+		navigationBar = new NavigationBar(this.rootContainer, new Dimension(size.width, 70));
 		navbarContainer = (JPanel) navigationBar.getRootComponent();
 
 		// Root section
@@ -63,6 +65,16 @@ public class MainMenu implements AppContext {
 		navigationBar.loadUser();
 		UserProfile userProfile = (UserProfile) AppFrame.getInstance().getContextPools().getContext("userProfile");
 		userProfile.loadUser();
+	}
+
+	public void loadDialogDetail(User user) {
+		bodyContainer.remove(mainContainer);
+		UserDialog userDialog = new UserDialog(this.rootContainer, new Dimension(1130, size.height - 70),
+				List.of(user));
+		mainContainer = (JPanel) userDialog.getRootComponent();
+		bodyContainer.add(mainContainer);
+		bodyContainer.revalidate();
+		bodyContainer.repaint();
 	}
 
 	@Override
