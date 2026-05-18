@@ -80,27 +80,27 @@ public class NavigationBar implements AppContext {
 
         // Title section
         titleRootContainer.setLayout(new BorderLayout());
-        titleRootContainer.setPreferredSize(new Dimension(size.width / 2 - 10, 50));
+        titleRootContainer.setPreferredSize(new Dimension(size.width / 2 - 10, 40));
         titleRootContainer.setBackground(bgColor);
         titleRootContainer.add(titleLabel);
 
-        titleLabel.setText("Menu Quản Lý Thư Viện");
-        titleLabel.setFont(new Font("Consolas", Font.BOLD, 30));
+        titleLabel.setText("ZChat");
+        titleLabel.setFont(new Font("Consolas", Font.BOLD, 20));
         titleLabel.setForeground(Color.white);
         titleLabel.setBorder(new EmptyBorder(0, 30, 0, 0));
 
         // User menu section
         menuRootContainer.setLayout(new FlowLayout(FlowLayout.TRAILING, 10, 0));
-        menuRootContainer.setPreferredSize(new Dimension(size.width / 2 - 10, 50));
+        menuRootContainer.setPreferredSize(new Dimension(size.width / 2 - 10, 40));
         menuRootContainer.setBackground(bgColor);
         menuRootContainer.add(profileButton);
         menuRootContainer.add(logoutButton);
 
-        profileButton.setPreferredSize(new Dimension(200, 50));
+        profileButton.setPreferredSize(new Dimension(200, 40));
         // profileButton.setBorder(BorderFactory.createLineBorder(Color.black, 2));
         // profileButton.setBackground(headerColor);
         profileButton.setText("");
-        profileButton.setFont(new Font("Consolas", Font.BOLD, 20));
+        profileButton.setFont(new Font("Consolas", Font.BOLD, 15));
         profileButton.setToolTipText("");
         profileButton.setIcon(profileIcon);
         profileButton.setFocusable(false);
@@ -116,7 +116,7 @@ public class NavigationBar implements AppContext {
             appFrame.repaint();
         });
 
-        logoutButton.setPreferredSize(new Dimension(50, 50));
+        logoutButton.setPreferredSize(new Dimension(40, 40));
         // logoutButton.setBorder(BorderFactory.createLineBorder(Color.black, 2));
         // logoutButton.setBackground(headerColor);
         logoutButton.setIcon(logoutIcon);
