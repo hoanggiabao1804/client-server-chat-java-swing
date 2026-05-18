@@ -12,8 +12,12 @@ import java.awt.GridBagLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Random;
+import java.util.UUID;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -28,13 +32,19 @@ import javax.swing.ScrollPaneLayout;
 
 import component.AppContext;
 import component.AppFrame;
+import domain.Dialog;
+import domain.FileMessage;
+import domain.Message;
+import domain.TextMessage;
 import domain.User;
+import util.Authentication;
 
 public class UserDialog implements AppContext {
     private Container parent;
     private Dimension size;
 
-    private final List<User> dialogUsers;
+    private User userLogin;
+    private Dialog dialog;
     private final JFileChooser fileChooser;
 
     // Font & Color
@@ -66,20 +76,19 @@ public class UserDialog implements AppContext {
     private ImageIcon sendIcon;
     private ImageIcon likeIcon;
 
-    private List<String> dialogMessages = List.of(
-            "Hello, how are you?",
-            "I'm good, thanks! How about you?",
-            "Doing well, just working on a project.",
-            "That's great to hear! What kind of project is it?",
-            "It's a chat application using Java Swing.",
-            "Wow, that sounds interesting! Good luck with it!",
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "?");
+    // private List<String> dialogMessages = List.of(
+    // "Hello, how are you?",
+    // "I'm good, thanks! How about you?",
+    // "Doing well, just working on a project.",
+    // "That's great to hear! What kind of project is it?",
+    // "It's a chat application using Java Swing.",
+    // "Wow, that sounds interesting! Good luck with it!",
+    // "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    // "?");
 
-    public UserDialog(Container parent, Dimension size, List<User> dialogUsers) {
+    public UserDialog(Container parent, Dimension size) {
         this.parent = parent;
         this.size = size;
-        this.dialogUsers = dialogUsers;
         this.fileChooser = new JFileChooser();
         this.fileChooser.setDialogTitle("Select file to upload");
 
@@ -101,10 +110,8 @@ public class UserDialog implements AppContext {
 
         // Body initialization
         bodyScrollPane = new JScrollPane(bodyContainer);
-        messageBubbleList = dialogMessages.stream()
-                .map(msg -> createMessageWrapper(new MessageItem(msg, new Color(0, 120, 255)),
-                        new Random().nextBoolean(), false))
-                .toList();
+
+        messageBubbleList = null;
         selectedMessageBubble = null;
 
         // Footer initialization
@@ -143,14 +150,13 @@ public class UserDialog implements AppContext {
         userAvatar.setPreferredSize(new Dimension(50, 50));
         userAvatar.setFocusable(false);
 
-        usernameLabel.setText(dialogUsers.get(0).getUsername());
         usernameLabel.setFont(headerFont);
 
         // Body section
         bodyContainer.setLayout(new BoxLayout(bodyContainer, BoxLayout.Y_AXIS));
         bodyContainer.setBackground(Color.white);
 
-        messageBubbleList.forEach(bodyContainer::add);
+        // messageBubbleList.forEach(bodyContainer::add);
 
         bodyScrollPane.getVerticalScrollBar().setUnitIncrement(16);
         bodyScrollPane.setLayout(new ScrollPaneLayout());
@@ -177,15 +183,35 @@ public class UserDialog implements AppContext {
                 File selectedFile = fileChooser.getSelectedFile();
 
                 // Process the selected file
-                FileMessageItem fileMsg = new FileMessageItem(
-                        selectedFile.getName(),
-                        formatFileSize(selectedFile.length()),
-                        new ImageIcon("assets/file.png"));
 
-                JPanel fileWrapper = createMessageWrapper(fileMsg, false, true);
+                String filePath = "resource/buckets/" + dialog.getId() + "/" + selectedFile.getName();
+
+                FileMessage fileMessage = new FileMessage(UUID.randomUUID().toString(),
+                        dialog.getId(),
+                        selectedFile.getName(), userLogin.getId().toString(), null,
+                        filePath,
+                        LocalDateTime.now(),
+                        "sent");
+
+                // Required an save action here:
+                Path sourcePath = Path.of(selectedFile.getPath());
+                Path targetPath = Path.of(filePath);
+
+                try {
+                    Files.copy(
+                            sourcePath,
+                            targetPath,
+                            StandardCopyOption.REPLACE_EXISTING);
+                } catch (Exception ex) {
+                    System.out.println(">>> ERROR: Failed to send file.");
+                    ex.printStackTrace();
+                }
+
+                JPanel fileWrapper = createMessageWrapper(fileMessage);
                 bodyContainer.add(fileWrapper);
                 bodyContainer.revalidate();
                 bodyContainer.repaint();
+
             }
 
         });
@@ -201,16 +227,39 @@ public class UserDialog implements AppContext {
         sendButton.setFocusable(false);
     }
 
-    private JPanel createMessageWrapper(Object item, boolean isMine, boolean isFile) {
+    private JPanel createMessageWrapper(Message message) {
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setOpaque(false);
         wrapper.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        // wrapper.setBackground(Color.green);
 
-        wrapper.add(isFile ? (FileMessageItem) item : (MessageItem) item,
-                isMine ? BorderLayout.EAST : BorderLayout.WEST);
+        Dimension itemSize = null;
+        boolean isMine = message.getSenderId().equals(userLogin.getId().toString());
 
-        Dimension itemSize = (isFile ? (FileMessageItem) item : (MessageItem) item).getPreferredSize();
+        if (message instanceof TextMessage) {
+            MessageItem messageItem = new MessageItem(message.getContent(), new Color(0, 120, 255));
+            wrapper.add(messageItem, isMine ? BorderLayout.EAST : BorderLayout.WEST);
+            itemSize = messageItem.getPreferredSize();
+
+        } else if (message instanceof FileMessage) {
+            FileMessage fileMessage = (FileMessage) message;
+            ImageIcon fileIcon = new ImageIcon("assets/file.png");
+            File file = new File(fileMessage.getFilePath());
+            FileMessageItem fileMessageItem = new FileMessageItem(fileMessage.getFileName(),
+                    formatFileSize(file.length()), fileIcon);
+            wrapper.add(fileMessageItem,
+                    isMine ? BorderLayout.EAST : BorderLayout.WEST);
+            itemSize = fileMessageItem.getPreferredSize();
+
+            fileMessageItem.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    System.out.println("Open file:");
+                }
+            });
+        }
+
+        // wrapper.add(isFile ? (FileMessageItem) item : (MessageItem) item,
+        // isMine ? BorderLayout.EAST : BorderLayout.WEST);
 
         wrapper.setMaximumSize(new Dimension(
                 Integer.MAX_VALUE,
@@ -220,31 +269,40 @@ public class UserDialog implements AppContext {
                 bodyContainer.getPreferredSize().width,
                 itemSize.height + 10));
 
-        if (isFile) {
-            ((FileMessageItem) item).addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    System.out.println("Open file:");
-                }
-            });
-        }
-
         return wrapper;
     }
 
-    public void revalidateData(List<User> newDialogUsers, List<String> newDialogMessages) {
-        this.dialogMessages = newDialogMessages;
-        this.dialogUsers.clear();
-        this.dialogUsers.addAll(newDialogUsers);
-        messageBubbleList = dialogMessages.stream()
-                .map(msg -> createMessageWrapper(new MessageItem(msg, new Color(0, 120, 255)),
-                        new Random().nextBoolean(), false))
+    public void loadUser() {
+        userLogin = Authentication.getInstance().getUserLogin();
+    }
+
+    public void loadDialog(Dialog dialog) {
+        this.dialog = dialog;
+        messageBubbleList = dialog.getMessages().stream()
+                .map(msg -> createMessageWrapper(msg))
                 .toList();
+
+        usernameLabel.setText(userLogin.getName());
+
         bodyContainer.removeAll();
         messageBubbleList.forEach(bodyContainer::add);
         bodyContainer.revalidate();
         bodyContainer.repaint();
     }
+
+    // public void revalidateData(List<User> newDialogUsers, List<String>
+    // newDialogMessages) {
+    // this.dialogMessages = newDialogMessages;
+    // messageBubbleList = dialogMessages.stream()
+    // .map(msg -> createMessageWrapper(new MessageItem(msg, new Color(0, 120,
+    // 255)),
+    // new Random().nextBoolean(), false))
+    // .toList();
+    // bodyContainer.removeAll();
+    // messageBubbleList.forEach(bodyContainer::add);
+    // bodyContainer.revalidate();
+    // bodyContainer.repaint();
+    // }
 
     private String formatFileSize(long bytes) {
         String[] units = { "B", "KB", "MB", "GB" };
