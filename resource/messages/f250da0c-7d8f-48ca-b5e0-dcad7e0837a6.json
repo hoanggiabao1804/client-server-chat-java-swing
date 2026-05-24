@@ -1,0 +1,48 @@
+[ {
+  "id" : "d79b62b4-2979-45f7-845b-1a279ec5d2f8",
+  "dialogId" : "f250da0c-7d8f-48ca-b5e0-dcad7e0837a6",
+  "content" : "Hello, how are you?",
+  "senderId" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+  "receiverId" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+  "timestamp" : "2026-05-15T12:31:12",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "08a96f93-6f29-4329-a055-1afa4e67f81d",
+  "dialogId" : "f250da0c-7d8f-48ca-b5e0-dcad7e0837a6",
+  "content" : "This is a text message.",
+  "senderId" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+  "receiverId" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+  "timestamp" : "2026-05-15T12:35:54",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "9697e566-cc51-47b0-bb8f-b8c735188223",
+  "dialogId" : "f250da0c-7d8f-48ca-b5e0-dcad7e0837a6",
+  "content" : "Uia, uia, uia.",
+  "senderId" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+  "receiverId" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+  "timestamp" : "2026-05-15T16:42:22",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "c0e52f7e-1df1-4937-ad12-3b1533456804",
+  "dialogId" : "f250da0c-7d8f-48ca-b5e0-dcad7e0837a6",
+  "fileName" : "file.txt",
+  "fileSize" : 34,
+  "senderId" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+  "receiverId" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+  "filePath" : "resource/buckets/f250da0c-7d8f-48ca-b5e0-dcad7e0837a6/c0e52f7e-1df1-4937-ad12-3b1533456804-file.txt",
+  "timestamp" : "2026-05-15T17:12:45",
+  "tag" : "sent",
+  "type" : "file"
+}, {
+  "id" : "45f07129-7678-4b7c-b33f-628127e17ea9",
+  "dialogId" : "f250da0c-7d8f-48ca-b5e0-dcad7e0837a6",
+  "content" : "Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "senderId" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+  "receiverId" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+  "timestamp" : "2026-05-15T23:19:10",
+  "tag" : "sent",
+  "type" : "text"
+} ]
