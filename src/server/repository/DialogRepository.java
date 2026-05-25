@@ -9,10 +9,11 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 
 import domain.Dialog;
 import domain.Message;
+import domain.UserMetadata;
+import util.ObjectMapperFactory;
 
 public class DialogRepository implements Repository {
     private static DialogRepository dialogRepository = null;
@@ -22,8 +23,7 @@ public class DialogRepository implements Repository {
     private static final Map<String, List<Dialog>> userIdIndexedStorage = new HashMap<>();
 
     private DialogRepository() {
-        objectMapper = new ObjectMapper();
-        objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+        objectMapper = ObjectMapperFactory.create();
     }
 
     public static DialogRepository getInstance() {
@@ -48,8 +48,8 @@ public class DialogRepository implements Repository {
 
             // Index dialogs by user ID
             for (Dialog dialog : dialogs) {
-                for (String userId : dialog.getParticipants()) {
-                    userIdIndexedStorage.computeIfAbsent(userId, k -> new ArrayList<>()).add(dialog);
+                for (UserMetadata userMetadata : dialog.getParticipants()) {
+                    userIdIndexedStorage.computeIfAbsent(userMetadata.getId(), k -> new ArrayList<>()).add(dialog);
                 }
             }
 
@@ -109,8 +109,8 @@ public class DialogRepository implements Repository {
         }
 
         storage.put(id, dialog);
-        for (String userId : dialog.getParticipants()) {
-            userIdIndexedStorage.computeIfAbsent(userId, k -> new ArrayList<>()).add(dialog);
+        for (UserMetadata userMetadata : dialog.getParticipants()) {
+            userIdIndexedStorage.computeIfAbsent(userMetadata.getId(), k -> new ArrayList<>()).add(dialog);
         }
 
         return dialog;
@@ -121,12 +121,20 @@ public class DialogRepository implements Repository {
             Dialog dialogToRemove = storage.get(id);
             storage.remove(id, dialogToRemove);
 
-            for (String userId : dialogToRemove.getParticipants()) {
-                userIdIndexedStorage.computeIfPresent(userId, (k, v) -> {
+            for (UserMetadata userMetadata : dialogToRemove.getParticipants()) {
+                userIdIndexedStorage.computeIfPresent(userMetadata.getId(), (k, v) -> {
                     v.remove(dialogToRemove);
                     return v;
                 });
             }
         }
+    }
+
+    public Dialog findDirectDialog(String userA, String userB) {
+        return storage.values().stream().filter(item -> "direct".equals(item.getType()))
+                .filter(item -> item.getParticipants().size() == 2)
+                .filter(item -> item.getParticipants().stream().anyMatch(part -> part.getId().equals(userA)))
+                .filter(item -> item.getParticipants().stream().anyMatch(part -> part.getId().equals(userB)))
+                .findFirst().orElse(null);
     }
 }

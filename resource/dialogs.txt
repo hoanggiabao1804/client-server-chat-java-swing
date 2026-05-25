@@ -1,9 +1,31 @@
 [ {
-  "id" : "6ea821fa-b7e4-4d73-b8e3-440c486f2913",
-  "name" : "Hoàng Bảo",
-  "participants" : [ "019d7869-8821-7da1-9f04-53ff53d972dd", "727dfee5-0591-447d-bef0-5ee0f56089f5" ]
-}, {
-  "id" : "f250da0c-7d8f-48ca-b5e0-dcad7e0837a6",
+  "id" : "ea9077d1-444b-4ccf-936d-e46fbff52ff5",
   "name" : "admin",
-  "participants" : [ "019d7869-8821-7da1-9f04-53ff53d972dd" ]
+  "participants" : [ {
+    "id" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+    "name" : "admin",
+    "email" : "admin@example.com",
+    "dob" : "2000-01-01",
+    "gender" : "MALE"
+  } ],
+  "type" : "private",
+  "ownerId" : "019d7869-8821-7da1-9f04-53ff53d972dd"
+}, {
+  "id" : "34273901-8cb3-4492-9355-91c78d0d5505",
+  "name" : "Hoàng Bảo",
+  "participants" : [ {
+    "id" : "019d7869-8821-7da1-9f04-53ff53d972dd",
+    "name" : "admin",
+    "email" : "admin@example.com",
+    "dob" : "2000-01-01",
+    "gender" : "MALE"
+  }, {
+    "id" : "727dfee5-0591-447d-bef0-5ee0f56089f5",
+    "name" : "Hoàng Bảo",
+    "email" : "bao123@gmail.com",
+    "dob" : "2000-01-02",
+    "gender" : "MALE"
+  } ],
+  "type" : "direct",
+  "ownerId" : "019d7869-8821-7da1-9f04-53ff53d972dd"
 } ]

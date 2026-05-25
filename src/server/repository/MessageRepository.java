@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import domain.FileMessage;
 import domain.Message;
 import util.ObjectMapperFactory;
 
@@ -124,19 +123,6 @@ public class MessageRepository implements Repository {
             List<Message> messagesInDialog = dialogIdIndexedStorage.getOrDefault(dialogId, new ArrayList<>());
             messagesInDialog.remove(messageToRemove);
             dialogIdIndexedStorage.put(dialogId, messagesInDialog);
-
-            if (messageToRemove instanceof FileMessage) {
-                FileMessage fileMessageToRemove = (FileMessage) messageToRemove;
-                File fileToRemove = new File(fileMessageToRemove.getFilePath());
-
-                if (fileToRemove.exists()) {
-                    if (fileToRemove.delete()) {
-                        System.out.println(">>> Deleted file '" + fileToRemove.getPath() + "'.");
-                    } else {
-                        System.out.println(">>> ERROR: Failed to delete file '" + fileToRemove.getPath() + "'.");
-                    }
-                }
-            }
         }
     }
 }

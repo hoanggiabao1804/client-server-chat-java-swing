@@ -20,16 +20,20 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 
 import component.AppFrame;
 import component.auth.LoginForm;
+import component.auth.RegisterForm;
 import component.menu.Sidebar;
 import component.menu.UserDialog;
 import domain.Packet;
-import domain.User;
 import domain.dto.AuthResponse;
+import domain.dto.CreateGroupResponse;
+import domain.dto.DeleteMessageResponse;
 import domain.dto.DialogContentResponse;
 import domain.dto.FileDownloadAck;
 import domain.dto.FileDownloadResponse;
 import domain.dto.FileDownloadSessionClient;
 import domain.dto.FileTransferResponse;
+import domain.dto.RegisterResponse;
+import domain.dto.SearchUserResponse;
 import domain.dto.SendMessageResponse;
 import domain.dto.UserDialogResponse;
 import util.LocalStorage;
@@ -129,39 +133,36 @@ public class TCPClient {
 
         switch (packet.getCommand()) {
             case "auth":
-                LoginForm loginForm = (LoginForm) AppFrame.getInstance().getContextPools().getContext("loginForm");
                 AuthResponse authResponse = objectMapper.convertValue(packet.getData(), AuthResponse.class);
-                User userLogin = authResponse.getUserLogin();
-                // try {
-                // System.out.println("Response from server: " +
-                // objectMapper.writeValueAsString(authResponse));
-                // } catch (Exception ex) {
 
-                // }
-                LocalStorage.setUserLogin(userLogin);
+                if (authResponse.getStatus().equals("success")) {
+                    LocalStorage.setUserLogin(authResponse.getUserLogin());
+                }
 
-                loginForm.getCountDownLatch().countDown();
-                // loginForm.getResponse(authResponse);
+                LoginForm loginForm = (LoginForm) AppFrame.getInstance().getContextPools().getContext("loginForm");
+
                 SwingUtilities.invokeLater(() -> {
                     loginForm.getResponse(authResponse);
                 });
+                break;
+            case "registry":
+                RegisterResponse registerResponse = objectMapper.convertValue(packet.getData(), RegisterResponse.class);
 
+                RegisterForm registerForm = (RegisterForm) AppFrame.getInstance().getContextPools()
+                        .getContext("registerForm");
+
+                SwingUtilities.invokeLater(() -> {
+                    registerForm.getResponse(registerResponse);
+                });
                 break;
             case "dialogs/get":
                 UserDialogResponse userDialogResponse = objectMapper.convertValue(packet.getData(),
                         UserDialogResponse.class);
 
-                // try {
-                // System.out.println("Response from server: " +
-                // objectMapper.writeValueAsString(userDialogResponse));
-                // } catch (Exception ex) {
-
-                // }
-
                 LocalStorage.setUserDialogs(userDialogResponse.getUserDialogs());
 
                 Sidebar sidebar = (Sidebar) AppFrame.getInstance().getContextPools().getContext("sidebar");
-                sidebar.getCountDownLatch().countDown();
+
                 SwingUtilities.invokeLater(() -> {
                     sidebar.getResponse(userDialogResponse);
                 });
@@ -183,7 +184,13 @@ public class TCPClient {
 
                 UserDialog userDialog = (UserDialog) AppFrame.getInstance().getContextPools()
                         .getContext(dialogContentResponse.getDialogId());
-                userDialog.getCountDownLatch().countDown();
+
+                Sidebar sidebar1 = (Sidebar) AppFrame.getInstance().getContextPools().getContext("sidebar");
+
+                SwingUtilities.invokeLater(() -> {
+                    sidebar1.getResponse(dialogContentResponse);
+                });
+
                 SwingUtilities.invokeLater(() -> {
                     userDialog.getResponse(dialogContentResponse);
                 });
@@ -192,26 +199,56 @@ public class TCPClient {
                 SendMessageResponse sendMessageResponse = objectMapper.convertValue(packet.getData(),
                         SendMessageResponse.class);
 
-                LocalStorage.addMessage(sendMessageResponse.getDialogId(), sendMessageResponse.getMessagePersisted());
+                if (sendMessageResponse.getStatus().equals("success")) {
+                    LocalStorage.addMessage(sendMessageResponse.getDialogId(),
+                            sendMessageResponse.getMessagePersisted());
+                }
 
                 UserDialog userDialog1 = (UserDialog) AppFrame.getInstance().getContextPools()
                         .getContext(sendMessageResponse.getDialogId());
-                userDialog1.getCountDownLatch().countDown();
+
+                Sidebar sidebar2 = (Sidebar) AppFrame.getInstance().getContextPools().getContext("sidebar");
+
+                SwingUtilities.invokeLater(() -> {
+                    sidebar2.getResponse(sendMessageResponse);
+                });
+
                 SwingUtilities.invokeLater(() -> {
                     userDialog1.getResponse(sendMessageResponse);
                 });
                 break;
+            case "dialogs/delete":
+                DeleteMessageResponse deleteMessageResponse = objectMapper.convertValue(packet.getData(),
+                        DeleteMessageResponse.class);
 
+                if (deleteMessageResponse.getStatus().equals("success")) {
+                    LocalStorage.removeMessage(deleteMessageResponse.getDialogId(),
+                            deleteMessageResponse.getMessageDeleted().getId());
+                }
+
+                UserDialog userDialog2 = (UserDialog) AppFrame.getInstance().getContextPools()
+                        .getContext(deleteMessageResponse.getDialogId());
+
+                Sidebar sidebar3 = (Sidebar) AppFrame.getInstance().getContextPools().getContext("sidebar");
+
+                SwingUtilities.invokeLater(() -> {
+                    sidebar3.getResponse(deleteMessageResponse);
+                });
+
+                SwingUtilities.invokeLater(() -> {
+                    userDialog2.getResponse(deleteMessageResponse);
+                });
+
+                break;
             case "dialogs/upload":
                 FileTransferResponse fileTransferResponse = objectMapper.convertValue(packet.getData(),
                         FileTransferResponse.class);
 
-                UserDialog userDialog2 = (UserDialog) AppFrame.getInstance().getContextPools()
+                UserDialog userDialog3 = (UserDialog) AppFrame.getInstance().getContextPools()
                         .getContext(fileTransferResponse.getDialogId());
 
-                userDialog2.getCountDownLatch().countDown();
                 SwingUtilities.invokeLater(() -> {
-                    userDialog2.getResponse(fileTransferResponse);
+                    userDialog3.getResponse(fileTransferResponse);
                 });
 
                 break;
@@ -244,12 +281,11 @@ public class TCPClient {
 
                         System.out.println("Download completed");
 
-                        UserDialog userDialog3 = (UserDialog) AppFrame.getInstance().getContextPools()
+                        UserDialog userDialog4 = (UserDialog) AppFrame.getInstance().getContextPools()
                                 .getContext(fileDownloadResponse.getDialogId());
 
-                        userDialog3.getCountDownLatch().countDown();
                         SwingUtilities.invokeLater(() -> {
-                            userDialog3.getResponse(new FileDownloadAck(
+                            userDialog4.getResponse(new FileDownloadAck(
                                     fileDownloadResponse.getDialogId(),
                                     fileDownloadResponse.getMessageId(),
                                     fileDownloadResponse.getFileName(),
@@ -265,9 +301,46 @@ public class TCPClient {
 
                     ex.printStackTrace();
                 }
+                break;
+            case "dialogs/group/create":
+                CreateGroupResponse createGroupResponse = objectMapper.convertValue(packet.getData(),
+                        CreateGroupResponse.class);
+
+                if (createGroupResponse.getStatus().equals("success")) {
+                    LocalStorage.addDialog(createGroupResponse.getDialog());
+                }
+
+                Sidebar sidebar4 = (Sidebar) AppFrame.getInstance().getContextPools().getContext("sidebar");
+
+                SwingUtilities.invokeLater(() -> {
+                    sidebar4.getResponse(createGroupResponse);
+                });
 
                 break;
+            case "users/fetch":
+                SearchUserResponse searchUserResponse = objectMapper.convertValue(packet.getData(),
+                        SearchUserResponse.class);
 
+                if (searchUserResponse.getStatus().equals("success")) {
+                    searchUserResponse.getFoundUsers().forEach(LocalStorage::addUser);
+                }
+
+                Sidebar sidebar5 = (Sidebar) AppFrame.getInstance().getContextPools().getContext("sidebar");
+
+                SwingUtilities.invokeLater(() -> {
+                    sidebar5.getResponse(searchUserResponse);
+                });
+
+                break;
+            case "users/search":
+                SearchUserResponse searchUserResponse1 = objectMapper.convertValue(packet.getData(),
+                        SearchUserResponse.class);
+
+                Sidebar sidebar6 = (Sidebar) AppFrame.getInstance().getContextPools().getContext("sidebar");
+
+                SwingUtilities.invokeLater(() -> {
+                    sidebar6.getResponse(searchUserResponse1);
+                });
             default:
                 System.out.println("?");
         }

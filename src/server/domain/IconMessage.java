@@ -45,6 +45,10 @@ public class IconMessage implements Message {
         this.dialogId = dialogId;
     }
 
+    public String getIconName() {
+        return this.iconName;
+    }
+
     public void setIconName(String iconName) {
         this.iconName = iconName;
     }

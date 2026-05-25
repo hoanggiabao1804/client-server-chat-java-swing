@@ -21,6 +21,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -41,12 +42,16 @@ import javax.swing.event.DocumentListener;
 
 import component.AppContext;
 import component.AppFrame;
+import component.PopupWindow;
 import domain.Dialog;
 import domain.FileMessage;
 import domain.IconMessage;
 import domain.Message;
 import domain.TextMessage;
 import domain.User;
+import domain.UserMetadata;
+import domain.dto.DeleteMessageRequest;
+import domain.dto.DeleteMessageResponse;
 import domain.dto.DialogContentResponse;
 import domain.dto.FileDownloadAck;
 import domain.dto.FileDownloadRequest;
@@ -77,7 +82,7 @@ public class UserDialog implements AppContext {
     private JPanel bodyContainer;
     private JPanel footerContainer;
 
-    // Heade section
+    // Header section
     private JPanel headerUserInfoContainer;
     private RoundButton userAvatar;
     private ImageIcon userAvatarIcon;
@@ -96,7 +101,11 @@ public class UserDialog implements AppContext {
     private ImageIcon sendIcon;
     private ImageIcon likeIcon;
 
-    private CountDownLatch countDownLatch;
+    private Dimension informationWindowSize;
+    private PopupWindow informationWindow;
+    private InformationDialog informationDialog;
+
+    private final Map<String, CountDownLatch> pendingObjects = new ConcurrentHashMap<>();
 
     public UserDialog(Container parent, Dimension size) {
         this.parent = parent;
@@ -158,9 +167,22 @@ public class UserDialog implements AppContext {
         headerUserInfoContainer.add(userAvatar);
         headerUserInfoContainer.add(usernameLabel);
 
+        informationWindowSize = new Dimension(600, 600);
+        informationWindow = new PopupWindow(informationWindowSize, "Thành viên");
+        informationDialog = new InformationDialog(informationWindow.getRootComponent());
+        informationDialog.setCloseAction(l -> {
+            informationWindow.close();
+        });
+
         userAvatar.setIcon(userAvatarIcon);
         userAvatar.setPreferredSize(new Dimension(50, 50));
         userAvatar.setFocusable(false);
+        userAvatar.addActionListener(l -> {
+            System.out.println("View user profile...");
+            informationDialog.loadDialog(dialog);
+            informationDialog.draw();
+            informationWindow.draw();
+        });
 
         usernameLabel.setFont(headerFont);
 
@@ -262,10 +284,12 @@ public class UserDialog implements AppContext {
                         messageInputField.getText().strip(), userLogin.getId().toString(), null, LocalDateTime.now(),
                         "sent");
 
+                CountDownLatch countDownLatch = new CountDownLatch(1);
+                pendingObjects.put(textMessage.getId(), countDownLatch);
+
                 PacketService
                         .sendMessage(new SendMessageRequest(userLogin.getId().toString(), dialog.getId(), textMessage));
 
-                countDownLatch = new CountDownLatch(1);
                 new Thread(() -> {
                     try {
                         boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
@@ -299,12 +323,13 @@ public class UserDialog implements AppContext {
         sendButton.setFocusable(false);
         sendButton.addActionListener(l -> {
             System.out.println("Input: '" + messageInputField.getText() + "'.");
+            CountDownLatch countDownLatch = new CountDownLatch(1);
 
             if (!messageInputField.getText().isBlank()) {
                 TextMessage textMessage = new TextMessage(UUID.randomUUID().toString(), dialog.getId(),
                         messageInputField.getText().strip(), userLogin.getId().toString(), null, LocalDateTime.now(),
                         "sent");
-
+                pendingObjects.put(textMessage.getId(), countDownLatch);
                 PacketService
                         .sendMessage(new SendMessageRequest(userLogin.getId().toString(), dialog.getId(), textMessage));
 
@@ -315,9 +340,9 @@ public class UserDialog implements AppContext {
 
                 messageInputField.setText("");
             } else {
-                IconMessage iconMessage = new IconMessage(UUID.randomUUID().toString(), dialog.getId(), "like",
+                IconMessage iconMessage = new IconMessage(UUID.randomUUID().toString(), dialog.getId(), "👍",
                         userLogin.getId().toString(), null, "assets/like.png", LocalDateTime.now(), "sent");
-
+                pendingObjects.put(iconMessage.getId(), countDownLatch);
                 PacketService
                         .sendMessage(new SendMessageRequest(userLogin.getId().toString(), dialog.getId(), iconMessage));
 
@@ -327,7 +352,6 @@ public class UserDialog implements AppContext {
                 bodyContainer.repaint();
             }
 
-            countDownLatch = new CountDownLatch(1);
             new Thread(() -> {
                 try {
                     boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
@@ -498,11 +522,34 @@ public class UserDialog implements AppContext {
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
                 System.out.println("Deleted message.");
-                PacketService.deleteMessage(originMessage.getId());
+                CountDownLatch countDownLatch = new CountDownLatch(1);
+                pendingObjects.put(originMessage.getId(), countDownLatch);
+                PacketService.deleteMessage(
+                        new DeleteMessageRequest(userLogin.getId().toString(), dialog.getId(), originMessage));
 
-                bodyContainer.remove(wrapper);
+                // bodyContainer.remove(wrapper);
+                wrapper.setVisible(false);
                 bodyContainer.revalidate();
                 bodyContainer.repaint();
+
+                new Thread(() -> {
+                    try {
+                        boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
+
+                        if (!success) {
+                            SwingUtilities.invokeLater(() -> {
+                                JOptionPane.showMessageDialog(
+                                        null,
+                                        "Server không phản hồi!",
+                                        "Gửi tin nhắn không thành công",
+                                        JOptionPane.ERROR_MESSAGE);
+                            });
+                        }
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
             }
 
             // Delete in database;
@@ -607,8 +654,20 @@ public class UserDialog implements AppContext {
     public void loadDialog(Dialog dialog) {
         this.dialog = dialog;
 
+        if (dialog.getType().equals("private")) {
+            userAvatarIcon = new ImageIcon("assets/user-lock.png");
+        } else if (dialog.getType().equals("direct")) {
+            userAvatarIcon = new ImageIcon("assets/user-round.png");
+        } else {
+            userAvatarIcon = new ImageIcon("assets/users-round.png");
+        }
+
+        userAvatar.setIcon(userAvatarIcon);
+
         if (dialog.getMessages() == null) {
-            countDownLatch = new CountDownLatch(1);
+            CountDownLatch countDownLatch = new CountDownLatch(1);
+            pendingObjects.put(dialog.getId(), countDownLatch);
+
             PacketService.loadDialogContent(dialog.getId());
 
             new Thread(() -> {
@@ -632,9 +691,19 @@ public class UserDialog implements AppContext {
         } else {
             messageBubbleList = dialog.getMessages().stream()
                     .map(msg -> createMessageWrapper(msg))
-                    .toList();
+                    .collect(Collectors.toList());
 
-            usernameLabel.setText(userLogin.getName());
+            String dialogName = dialog.getName();
+            if (dialog.getType().equals("direct")) {
+                for (UserMetadata userMetadata : dialog.getParticipants()) {
+                    if (!userMetadata.getId().equals(userLogin.getId().toString())) {
+                        dialogName = userMetadata.getName();
+                        break;
+                    }
+                }
+            }
+
+            usernameLabel.setText(dialogName);
 
             bodyContainer.removeAll();
             messageBubbleList.forEach(bodyContainer::add);
@@ -644,12 +713,30 @@ public class UserDialog implements AppContext {
     }
 
     public synchronized void getResponse(DialogContentResponse dialogContentResponse) {
+
+        String dialogId = dialogContentResponse.getDialogId();
+        CountDownLatch countDownLatch = pendingObjects.remove(dialogId);
+
+        if (countDownLatch != null) {
+            countDownLatch.countDown();
+        }
+
         if (dialogContentResponse.getStatus().equals("success")) {
             messageBubbleList = dialog.getMessages().stream()
                     .map(msg -> createMessageWrapper(msg))
-                    .toList();
+                    .collect(Collectors.toList());
 
-            usernameLabel.setText(userLogin.getName());
+            String dialogName = dialog.getName();
+            if (dialog.getType().equals("direct")) {
+                for (UserMetadata userMetadata : dialog.getParticipants()) {
+                    if (!userMetadata.getId().equals(userLogin.getId().toString())) {
+                        dialogName = userMetadata.getName();
+                        break;
+                    }
+                }
+            }
+
+            usernameLabel.setText(dialogName);
 
             bodyContainer.removeAll();
             messageBubbleList.forEach(bodyContainer::add);
@@ -664,10 +751,17 @@ public class UserDialog implements AppContext {
 
     public synchronized void getResponse(SendMessageResponse sendMessageResponse) {
         String messageId = sendMessageResponse.getMessagePersisted().getId();
+        CountDownLatch countDownLatch = pendingObjects.remove(messageId);
+
+        if (countDownLatch != null) {
+            countDownLatch.countDown();
+        }
+
         JPanel wrapper = null;
         if (!messageBubbleMap.containsKey(messageId)) {
             wrapper = createMessageWrapper(sendMessageResponse.getMessagePersisted());
             messageBubbleMap.put(messageId, wrapper);
+            messageBubbleList.add(wrapper);
             bodyContainer.add(wrapper);
             bodyContainer.revalidate();
             bodyContainer.repaint();
@@ -696,6 +790,13 @@ public class UserDialog implements AppContext {
     }
 
     public synchronized void getResponse(FileTransferResponse fileTransferResponse) {
+        String messageId = fileTransferResponse.getMessageId();
+        CountDownLatch countDownLatch = pendingObjects.remove(messageId);
+
+        if (countDownLatch != null) {
+            countDownLatch.countDown();
+        }
+
         if (fileTransferResponse.getStatus().equals("success")) {
             System.out.println("Progress: " + fileTransferResponse.getSentBytes() + "/"
                     + fileTransferResponse.getFileSize() + "bytes");
@@ -714,6 +815,14 @@ public class UserDialog implements AppContext {
     }
 
     public synchronized void getResponse(FileDownloadAck fileDownloadAck) {
+
+        // String messageId = fileDownloadAck.getMessageId();
+        // CountDownLatch countDownLatch = pendingObjects.remove(messageId);
+
+        // if (countDownLatch != null) {
+        // countDownLatch.countDown();
+        // }
+
         if (fileDownloadAck.getStatus().equals("success")) {
             System.out.println("Progress: " + fileDownloadAck.getSentBytes() + "/"
                     + fileDownloadAck.getFileSize() + "bytes");
@@ -731,8 +840,34 @@ public class UserDialog implements AppContext {
         }
     }
 
-    public CountDownLatch getCountDownLatch() {
-        return this.countDownLatch;
+    public synchronized void getResponse(DeleteMessageResponse deleteMessageResponse) {
+        String messageId = deleteMessageResponse.getMessageDeleted().getId();
+        CountDownLatch countDownLatch = pendingObjects.remove(messageId);
+
+        if (countDownLatch != null) {
+            countDownLatch.countDown();
+        }
+
+        if (deleteMessageResponse.getStatus().equals("success")) {
+            JPanel messageBubble = messageBubbleMap.remove(messageId);
+            messageBubbleList.remove(messageBubble);
+
+            bodyContainer.remove(messageBubble);
+            bodyContainer.revalidate();
+            bodyContainer.repaint();
+
+        } else {
+            JPanel messageBubble = messageBubbleMap.get(messageId);
+            if (!messageBubble.isVisible()) {
+                messageBubble.setVisible(true);
+                bodyContainer.revalidate();
+                bodyContainer.repaint();
+            }
+
+            JOptionPane.showMessageDialog(null, deleteMessageResponse.getMessage(),
+                    "Xóa tin nhắn thất bại",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private File getAvailableFile(File folder, String fileName) {

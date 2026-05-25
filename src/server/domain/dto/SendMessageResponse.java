@@ -30,7 +30,7 @@ public class SendMessageResponse {
         return this.messagePersisted;
     }
 
-    public void setMessageList(Message messagePersisted) {
+    public void setMessagePersisted(Message messagePersisted) {
         this.messagePersisted = messagePersisted;
     }
 

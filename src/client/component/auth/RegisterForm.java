@@ -14,7 +14,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
@@ -25,6 +26,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -35,9 +37,9 @@ import component.PopupWindow;
 import component.picker.DatePicker;
 import constant.GenderEnum;
 import domain.User;
-// import repository.UserRepository;
-import util.Authentication;
+import domain.dto.RegisterResponse;
 import util.FieldValidator;
+import util.PacketService;
 
 public class RegisterForm implements AppContext {
 
@@ -133,6 +135,8 @@ public class RegisterForm implements AppContext {
     private Dimension windowSize;
     private PopupWindow dobPickerPopupWindow;
     private DatePicker dobPicker;
+
+    private CountDownLatch countDownLatch;
 
     public RegisterForm(Container parent) {
         this.parent = parent;
@@ -640,7 +644,6 @@ public class RegisterForm implements AppContext {
             }
 
             if (!hasError) {
-                user.setId(UUID.randomUUID());
                 user.setName(nameTextField.getText().strip());
                 user.setUsername(usernameTextField.getText().strip());
                 user.setPassword(password.strip());
@@ -649,16 +652,44 @@ public class RegisterForm implements AppContext {
                 user.setGender(genderMap1.get(genderComboBox.getSelectedItem()));
                 user.setCreatedAt(LocalDate.now());
 
-                String registerResult = register();
+                registerForm.setEnabled(false);
 
-                if (registerResult.isEmpty()) {
-                    Authentication.getInstance().authenticate(usernameTextField.getText().strip(), password.strip());
-                    this.reset();
-                    this.switchContext("loginForm");
-                } else {
-                    JOptionPane.showMessageDialog(null, registerResult, "Đăng ký không thành công",
-                            JOptionPane.ERROR_MESSAGE);
-                }
+                countDownLatch = new CountDownLatch(1);
+
+                PacketService.registration(user);
+
+                new Thread(() -> {
+                    try {
+                        boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
+
+                        if (!success) {
+                            SwingUtilities.invokeLater(() -> {
+                                registerForm.setEnabled(true);
+                                JOptionPane.showMessageDialog(
+                                        null,
+                                        "Server không phản hồi!",
+                                        "Đăng ký không thành công",
+                                        JOptionPane.ERROR_MESSAGE);
+                            });
+                        }
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
+
+                // String registerResult = register();
+
+                // if (registerResult.isEmpty()) {
+                // Authentication.getInstance().authenticate(usernameTextField.getText().strip(),
+                // password.strip());
+                // this.reset();
+                // this.switchContext("loginForm");
+                // } else {
+                // JOptionPane.showMessageDialog(null, registerResult, "Đăng ký không thành
+                // công",
+                // JOptionPane.ERROR_MESSAGE);
+                // }
             }
         });
 
@@ -685,16 +716,20 @@ public class RegisterForm implements AppContext {
         });
     }
 
-    private String register() {
-        // User foundUser =
-        // UserRepository.getInstance().findByUsername(user.getUsername());
-        // if (foundUser != null) {
-        // return "Người dùng đã tồn tại.";
-        // }
+    public synchronized void getResponse(RegisterResponse registerResponse) {
+        countDownLatch.countDown();
+        registerForm.setEnabled(true);
+        if (registerResponse.getStatus().equals("success")) {
+            this.reset();
+            this.switchContext("loginForm");
+        } else {
+            JOptionPane.showMessageDialog(
+                    null,
+                    registerResponse.getMessage(),
+                    "Đăng ký không thành công",
+                    JOptionPane.ERROR_MESSAGE);
+        }
 
-        // UserRepository.getInstance().save(this.user);
-
-        return "";
     }
 
     public void reset() {

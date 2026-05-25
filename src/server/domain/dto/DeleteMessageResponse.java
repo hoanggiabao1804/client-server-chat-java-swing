@@ -2,18 +2,18 @@ package domain.dto;
 
 import domain.Message;
 
-public class SendMessageResponse {
+public class DeleteMessageResponse {
     private String dialogId;
-    private Message messagePersisted;
+    private Message messageDeleted;
     private String message;
     private String status;
 
-    public SendMessageResponse() {
+    public DeleteMessageResponse() {
     }
 
-    public SendMessageResponse(String dialogId, Message messagePersisted, String message, String status) {
+    public DeleteMessageResponse(String dialogId, Message messageDeleted, String message, String status) {
         this.dialogId = dialogId;
-        this.messagePersisted = messagePersisted;
+        this.messageDeleted = messageDeleted;
         this.message = message;
         this.status = status;
     }
@@ -26,12 +26,12 @@ public class SendMessageResponse {
         this.dialogId = dialogId;
     }
 
-    public Message getMessagePersisted() {
-        return this.messagePersisted;
+    public Message getMessageDeleted() {
+        return this.messageDeleted;
     }
 
-    public void setMessagePersisted(Message messagePersisted) {
-        this.messagePersisted = messagePersisted;
+    public void setMessageDeleted(Message messageDeleted) {
+        this.messageDeleted = messageDeleted;
     }
 
     public String getMessage() {

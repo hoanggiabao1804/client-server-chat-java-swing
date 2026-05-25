@@ -11,9 +11,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,14 +28,22 @@ import domain.Dialog;
 import domain.FileMessage;
 import domain.Message;
 import domain.User;
+import domain.UserMetadata;
 import domain.dto.AuthRequest;
 import domain.dto.AuthResponse;
+import domain.dto.CreateGroupRequest;
+import domain.dto.CreateGroupResponse;
+import domain.dto.DeleteMessageRequest;
+import domain.dto.DeleteMessageResponse;
 import domain.dto.DialogContentResponse;
 import domain.dto.FileDownloadRequest;
 import domain.dto.FileDownloadResponse;
 import domain.dto.FileTransferRequest;
 import domain.dto.FileTransferResponse;
 import domain.dto.FileUploadSession;
+import domain.dto.RegisterResponse;
+import domain.dto.SearchUserRequest;
+import domain.dto.SearchUserResponse;
 import domain.dto.SendMessageRequest;
 import domain.dto.SendMessageResponse;
 import domain.dto.UserDialogResponse;
@@ -41,6 +51,7 @@ import repository.DialogRepository;
 import repository.MessageRepository;
 import repository.RepositoryManager;
 import repository.UserRepository;
+import util.Mapper;
 import util.ObjectMapperFactory;
 
 public class TCPServer {
@@ -67,6 +78,10 @@ public class TCPServer {
             System.out.println("Errors happened!");
             ex.printStackTrace();
         }
+    }
+
+    public static boolean isOnline(String userId) {
+        return onlineUsers.containsKey(userId);
     }
 
     public static void putToClientPool(String userId, ClientHandler handler) {
@@ -188,6 +203,37 @@ class ClientHandler implements Runnable {
                 }
                 break;
             case "registry":
+                User user = objectMapper.convertValue(packet.getData(), User.class);
+
+                System.out.println("Registering user with username: " + user.getUsername());
+                if (UserRepository.getInstance().findByUsername(user.getUsername()) != null) {
+                    System.out.println("Registration fail with error: Username is already taken.");
+                    sentPacket = new Packet(
+                            "localhost",
+                            30036,
+                            new RegisterResponse(null, "Tên đăng nhập đã tồn tại.", "failed"),
+                            "RegisterResponse",
+                            "registry");
+                } else {
+                    user.setId(UUID.randomUUID());
+                    User savedUser = UserRepository.getInstance().save(user);
+                    DialogRepository.getInstance().save(new Dialog(
+                            UUID.randomUUID().toString(),
+                            savedUser.getName(),
+                            Arrays.asList(Mapper.userToUserMetadata(savedUser)),
+                            new ArrayList<>(),
+                            "private",
+                            savedUser.getId().toString()));
+
+                    System.out.println("Successful to register user.");
+                    sentPacket = new Packet(
+                            "localhost",
+                            30036,
+                            new RegisterResponse(savedUser.getId().toString(), "Đăng ký thành công.", "success"),
+                            "RegisterResponse",
+                            "registry");
+                }
+
                 break;
             case "dialogs/get":
                 String userId = (String) packet.getData();
@@ -240,6 +286,8 @@ class ClientHandler implements Runnable {
 
                 Message messagePersisted = MessageRepository.getInstance().save(message);
 
+                System.out.println("Message content: " + messagePersisted.getContent());
+
                 sentPacket = new Packet(
                         "localhost",
                         30036,
@@ -251,10 +299,51 @@ class ClientHandler implements Runnable {
                 Dialog dialog = DialogRepository.getInstance().findById(message.getDialogId());
 
                 TCPServer.multicast(sentPacket,
-                        dialog.getParticipants().stream().filter(item -> !item.equals(messagePersisted.getSenderId()))
-                                .collect(Collectors.toList()));
+                        dialog.getParticipants().stream().map(item -> item.getId()).collect(Collectors.toList()));
+                return;
+            case "dialogs/delete":
+                DeleteMessageRequest deleteMessageRequest = objectMapper.convertValue(packet.getData(),
+                        DeleteMessageRequest.class);
+                Message message1 = deleteMessageRequest.getMessage();
 
-                break;
+                if (message1 instanceof FileMessage) {
+                    String filePath = "resource/buckets/" + message1.getDialogId() + "/"
+                            + message1.getId() + "-" + message1.getContent();
+
+                    // File fileToRemove = new File(filePath);
+
+                    // if (fileToRemove.exists()) {
+                    // if (fileToRemove.delete()) {
+                    // System.out.println(">>> Deleted file '" + fileToRemove.getPath() + "'.");
+                    // } else {
+                    // System.out.println(">>> ERROR: Failed to delete file '" +
+                    // fileToRemove.getPath() + "'.");
+                    // sentPacket = new Packet(
+                    // "localhost",
+                    // 30036,
+                    // new DeleteMessageResponse(message1.getDialogId(), message1,
+                    // "Failed to delete message. File not found.", "failed"),
+                    // "DeleteMessageResponse",
+                    // "dialogs/delete");
+                    // }
+                    // }
+                }
+
+                MessageRepository.getInstance().deleteById(message1.getId());
+
+                sentPacket = new Packet(
+                        "localhost",
+                        30036,
+                        new DeleteMessageResponse(message1.getDialogId(), message1,
+                                "Message is deleted successful.", "success"),
+                        "DeleteMessageResponse",
+                        "dialogs/delete");
+
+                Dialog dialog1 = DialogRepository.getInstance().findById(message1.getDialogId());
+
+                TCPServer.multicast(sentPacket,
+                        dialog1.getParticipants().stream().map(item -> item.getId()).collect(Collectors.toList()));
+                return;
             case "dialogs/upload":
                 FileTransferRequest fileTransferRequest = objectMapper.convertValue(packet.getData(),
                         FileTransferRequest.class);
@@ -355,8 +444,78 @@ class ClientHandler implements Runnable {
                         e.printStackTrace();
                     }
                 }).start();
-
                 return;
+            case "dialogs/group/create":
+                CreateGroupRequest createGroupRequest = objectMapper.convertValue(packet.getData(),
+                        CreateGroupRequest.class);
+
+                List<String> participants = new ArrayList<>(createGroupRequest.getParticipantIds());
+
+                if (!participants.contains(createGroupRequest.getCreatorId())) {
+                    participants.add(createGroupRequest.getCreatorId());
+                }
+
+                List<UserMetadata> userMetadatas = participants.stream().map(item -> {
+                    User user1 = UserRepository.getInstance().findById(item);
+
+                    return Mapper.userToUserMetadata(user1);
+                }).collect(Collectors.toList());
+
+                Dialog group = new Dialog(
+                        UUID.randomUUID().toString(),
+                        createGroupRequest.getGroupName(),
+                        userMetadatas,
+                        new ArrayList<>(),
+                        createGroupRequest.getType(),
+                        createGroupRequest.getCreatorId());
+
+                Dialog saved = DialogRepository.getInstance().save(group);
+
+                sentPacket = new Packet(
+                        "localhost",
+                        30036,
+                        new CreateGroupResponse(saved, "Tạo nhóm thành công.", "success"),
+                        "CreateGroupResponse",
+                        "dialogs/group/create");
+
+                TCPServer.multicast(sentPacket, participants);
+                return;
+            case "users/fetch":
+            case "users/search":
+                SearchUserRequest searchUserRequest = objectMapper.convertValue(packet.getData(),
+                        SearchUserRequest.class);
+
+                List<User> foundUsers = null;
+                String keyword = searchUserRequest.getKeyword();
+
+                if (packet.getCommand().equals("users/fetch")) {
+                    foundUsers = UserRepository.getInstance().findAll();
+                } else {
+                    foundUsers = UserRepository.getInstance().findAll().stream()
+                            .filter(item -> item.getName().toLowerCase().contains(keyword))
+                            .collect(Collectors.toList());
+                }
+
+                if (!searchUserRequest.getStatus().equals("all")) {
+                    boolean isOnline = searchUserRequest.getStatus().equals("online");
+                    foundUsers = foundUsers.stream().filter(item -> {
+                        String id = item.getId().toString();
+                        return (isOnline) ? TCPServer.isOnline(id) : !TCPServer.isOnline(id);
+                    }).collect(Collectors.toList());
+                }
+
+                List<UserMetadata> userMetadatas1 = foundUsers.stream().map(Mapper::userToUserMetadata)
+                        .collect(Collectors.toList());
+
+                sentPacket = new Packet(
+                        "localhost",
+                        30036,
+                        new SearchUserResponse(searchUserRequest.getRequesterId(), userMetadatas1,
+                                "Searched users successfull.", "success"),
+                        "SearchUserResponse",
+                        packet.getCommand());
+
+                break;
             default:
                 System.out.println("?");
 

@@ -477,22 +477,17 @@ public class LoginForm implements AppContext {
     }
 
     public synchronized void getResponse(AuthResponse authResponse) {
+        countDownLatch.countDown();
         loginForm.setEnabled(true);
         if (authResponse.getStatus().equals("success")) {
             MainMenu mainMenu = (MainMenu) AppFrame.getInstance().getContextPools().getContext("mainMenu");
             mainMenu.loadUser();
             this.reset();
             this.switchContext("mainMenu");
-
-            System.out.println("Is called");
         } else {
             JOptionPane.showMessageDialog(null, authResponse.getLoginMessage(), "Đăng nhập không thành công",
                     JOptionPane.ERROR_MESSAGE);
         }
-    }
-
-    public synchronized CountDownLatch getCountDownLatch() {
-        return this.countDownLatch;
     }
 
     @Override

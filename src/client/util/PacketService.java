@@ -10,9 +10,13 @@ import java.util.Arrays;
 
 import domain.FileMessage;
 import domain.Packet;
+import domain.User;
 import domain.dto.AuthRequest;
+import domain.dto.CreateGroupRequest;
+import domain.dto.DeleteMessageRequest;
 import domain.dto.FileDownloadRequest;
 import domain.dto.FileTransferRequest;
+import domain.dto.SearchUserRequest;
 import domain.dto.SendMessageRequest;
 import main.TCPClient;
 
@@ -34,6 +38,17 @@ public class PacketService {
                 new AuthRequest(username, password),
                 "AuthRequest",
                 "auth");
+
+        TCPClient.enqueuPacket(packet);
+    }
+
+    public static synchronized void registration(User user) {
+        Packet packet = new Packet(
+                socket.getInetAddress().getHostAddress(),
+                socket.getPort(),
+                user,
+                "User",
+                "registry");
 
         TCPClient.enqueuPacket(packet);
     }
@@ -71,12 +86,12 @@ public class PacketService {
         TCPClient.enqueuPacket(packet);
     }
 
-    public static synchronized void deleteMessage(String messageId) {
+    public static synchronized void deleteMessage(DeleteMessageRequest deleteMessageRequest) {
         Packet packet = new Packet(
                 socket.getInetAddress().getHostAddress(),
                 socket.getPort(),
-                messageId,
-                "String",
+                deleteMessageRequest,
+                "DeleteMessageRequest",
                 "dialogs/delete");
 
         TCPClient.enqueuPacket(packet);
@@ -124,6 +139,39 @@ public class PacketService {
                 fileDownloadRequest,
                 "FileDownloadRequest",
                 "dialogs/download");
+
+        TCPClient.enqueuPacket(packet);
+    }
+
+    public static synchronized void createGroup(CreateGroupRequest createGroupRequest) {
+        Packet packet = new Packet(
+                socket.getInetAddress().getHostAddress(),
+                socket.getPort(),
+                createGroupRequest,
+                "CreateGroupRequest",
+                "dialogs/group/create");
+
+        TCPClient.enqueuPacket(packet);
+    }
+
+    public static synchronized void fetchUsers(SearchUserRequest searchUserRequest) {
+        Packet packet = new Packet(
+                socket.getInetAddress().getHostAddress(),
+                socket.getPort(),
+                searchUserRequest,
+                "SearchUserRequest",
+                "users/fetch");
+
+        TCPClient.enqueuPacket(packet);
+    }
+
+    public static synchronized void searchUsers(SearchUserRequest searchUserRequest) {
+        Packet packet = new Packet(
+                socket.getInetAddress().getHostAddress(),
+                socket.getPort(),
+                searchUserRequest,
+                "SearchUserRequest",
+                "users/search");
 
         TCPClient.enqueuPacket(packet);
     }
