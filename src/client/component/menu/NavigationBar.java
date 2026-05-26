@@ -18,7 +18,6 @@ import javax.swing.border.EmptyBorder;
 import component.AppContext;
 import component.AppFrame;
 import domain.User;
-import util.Authentication;
 import util.LocalStorage;
 
 public class NavigationBar implements AppContext {
@@ -47,8 +46,6 @@ public class NavigationBar implements AppContext {
         this.size = size;
         Color bgColor = new Color(0, 129, 138);
         // Color headerColor = new Color(219, 237, 243);
-
-        userLogin = Authentication.getInstance().getUserLogin();
 
         // Root initialization
         navbarContainer = new JPanel();
@@ -98,9 +95,6 @@ public class NavigationBar implements AppContext {
         menuRootContainer.add(logoutButton);
 
         profileButton.setPreferredSize(new Dimension(200, 40));
-        // profileButton.setBorder(BorderFactory.createLineBorder(Color.black, 2));
-        // profileButton.setBackground(headerColor);
-        profileButton.setText("");
         profileButton.setFont(new Font("Consolas", Font.BOLD, 15));
         profileButton.setToolTipText("");
         profileButton.setIcon(profileIcon);
@@ -118,23 +112,22 @@ public class NavigationBar implements AppContext {
         });
 
         logoutButton.setPreferredSize(new Dimension(40, 40));
-        // logoutButton.setBorder(BorderFactory.createLineBorder(Color.black, 2));
-        // logoutButton.setBackground(headerColor);
         logoutButton.setIcon(logoutIcon);
         logoutButton.setFocusable(false);
-        // logoutButton.setBorder(null);
         logoutButton.addActionListener(l -> {
-            // this.switchContext("loginForm");S
             AppFrame appFrame = AppFrame.getInstance();
-            AppContext mainMenuContext = appFrame.getContextPools().getContext("mainMenu");
+
+            appFrame.reset();
+
             AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
-            appFrame.remove(mainMenuContext.getRootComponent());
+
             appFrame.setMinimumSize(loginContext.getSize());
             appFrame.setSize(loginContext.getSize());
 
-            appFrame.add(loginContext.getRootComponent());
-            appFrame.repaint();
-            // AppFrame.getInstance().dispose();
+            loginContext.draw();
+
+            appFrame.getContentPane().revalidate();
+            appFrame.getContentPane().repaint();
         });
     }
 
@@ -158,7 +151,7 @@ public class NavigationBar implements AppContext {
         this.parent.setMinimumSize(context.getSize());
         this.parent.setSize(context.getSize());
         this.parent.add(context.getRootComponent());
-        // this.parent.setLayout(null);
+        this.parent.revalidate();
         this.parent.repaint();
     }
 

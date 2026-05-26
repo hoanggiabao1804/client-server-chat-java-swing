@@ -766,7 +766,7 @@ public class RegisterForm implements AppContext {
         this.parent.setMinimumSize(context.getSize());
         this.parent.setSize(context.getSize());
         this.parent.add(context.getRootComponent());
-        // this.parent.setLayout(null);
+        this.parent.revalidate();
         this.parent.repaint();
     }
 

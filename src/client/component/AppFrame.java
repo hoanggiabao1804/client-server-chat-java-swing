@@ -7,13 +7,12 @@ import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
-import domain.User;
+import util.LocalStorage;
 
 public class AppFrame extends JFrame {
 
     private static AppFrame instance;
     private AppContextPools contextPools;
-    private static User userLogin = null;
 
     private AppFrame() {
         contextPools = new AppContextPools(this);
@@ -54,11 +53,13 @@ public class AppFrame extends JFrame {
         return instance;
     }
 
-    public static User getUserLogin() {
-        return AppFrame.userLogin;
-    }
+    public void reset() {
+        this.getContentPane().removeAll();
 
-    public static void setUserLogin(User user) {
-        AppFrame.userLogin = user;
+        LocalStorage.reset();
+        contextPools.reset(this);
+
+        this.getContentPane().revalidate();
+        this.getContentPane().repaint();
     }
 }

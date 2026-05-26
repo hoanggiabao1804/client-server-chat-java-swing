@@ -1,12 +1,11 @@
 package domain;
 
 import java.time.LocalDate;
-import java.util.UUID;
 
 import constant.GenderEnum;
 
 public class User {
-    private UUID id;
+    private String id;
     private String name;
     private String username;
     private String password;
@@ -19,8 +18,9 @@ public class User {
     public User() {
     }
 
-    public User(String name, String username, String password, String email, LocalDate dob, GenderEnum gender) {
-        this.id = UUID.randomUUID();
+    public User(String id, String name, String username, String password, String email, LocalDate dob,
+            GenderEnum gender) {
+        this.id = id;
         this.name = name;
         this.username = username;
         this.password = password;
@@ -30,11 +30,11 @@ public class User {
         this.createdAt = LocalDate.now();
     }
 
-    public UUID getId() {
+    public String getId() {
         return this.id;
     }
 
-    public void setId(UUID id) {
+    public void setId(String id) {
         this.id = id;
     }
 

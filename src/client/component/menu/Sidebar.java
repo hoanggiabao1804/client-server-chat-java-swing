@@ -70,6 +70,7 @@ public class Sidebar implements AppContext {
     private final Font tabFont;
     private final Font textFont;
     private final Color sidebarColor;
+    private final Color clickedTabColor;
 
     // Containers section
     private JPanel sidebarContainer;
@@ -110,6 +111,7 @@ public class Sidebar implements AppContext {
         this.tabFont = new Font("Consolas", Font.BOLD, 20);
         this.textFont = new Font("Consolas", Font.PLAIN, 15);
         this.sidebarColor = new Color(0, 129, 138);
+        this.clickedTabColor = new Color(114, 210, 219);
 
         // Container initialization
         sidebarContainer = new JPanel();
@@ -158,7 +160,7 @@ public class Sidebar implements AppContext {
                 bodyContainer.repaint();
 
                 CountDownLatch countDownLatch = new CountDownLatch(1);
-                pendingObjects.put("create-group" + userLogin.getId().toString(), countDownLatch);
+                pendingObjects.put("create-group" + userLogin.getId(), countDownLatch);
 
                 PacketService.createGroup(createGroupRequest);
 
@@ -291,24 +293,25 @@ public class Sidebar implements AppContext {
         // Root section
         rootPanel.setLayout(new BorderLayout(10, 0));
         rootPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        rootPanel.setBackground((selectedDialog == dialog) ? Color.blue : Color.white);
+        rootPanel.setBackground((selectedDialog == dialog) ? clickedTabColor : Color.white);
         rootPanel.setPreferredSize(new Dimension(tabWidth, tabHeight));
         rootPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, tabHeight));
         rootPanel.setMinimumSize(new Dimension(tabWidth, tabHeight));
-        rootPanel.addMouseListener(new MouseAdapter() {
+
+        MouseAdapter mouseAdapter = new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
                 if (selectedDialog != null) {
                     if (selectedDialog != dialog) {
                         selectedDialogTab.setBackground(Color.white);
                         selectedDialogTab = rootPanel;
-                        selectedDialogTab.setBackground(Color.blue);
+                        selectedDialogTab.setBackground(clickedTabColor);
 
                         selectedDialog = dialog;
                     }
                 } else {
                     selectedDialog = dialog;
                     selectedDialogTab = rootPanel;
-                    selectedDialogTab.setBackground(Color.blue);
+                    selectedDialogTab.setBackground(clickedTabColor);
                 }
 
                 MainMenu mainMenu = (MainMenu) AppFrame.getInstance().getContextPools().getContext("mainMenu");
@@ -326,7 +329,9 @@ public class Sidebar implements AppContext {
                     rootPanel.setBackground(Color.white);
                 }
             }
-        });
+        };
+
+        rootPanel.addMouseListener(mouseAdapter);
 
         avatarPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
         avatarPanel.setOpaque(false);
@@ -338,6 +343,7 @@ public class Sidebar implements AppContext {
         avatarButton.setMinimumSize(new Dimension(50, 50));
         avatarButton.setMaximumSize(new Dimension(50, 50));
         avatarButton.setFocusable(false);
+        avatarButton.addMouseListener(mouseAdapter);
 
         avatarPanel.add(avatarButton);
 
@@ -347,7 +353,7 @@ public class Sidebar implements AppContext {
         String dialogName = dialog.getName();
         if (dialog.getType().equals("direct")) {
             for (UserMetadata userMetadata : dialog.getParticipants()) {
-                if (!userMetadata.getId().equals(userLogin.getId().toString())) {
+                if (!userMetadata.getId().equals(userLogin.getId())) {
                     dialogName = userMetadata.getName();
                     break;
                 }
@@ -362,7 +368,7 @@ public class Sidebar implements AppContext {
                 : dialog.getMessages().getLast();
 
         lastMessageLabel.setText(lastMsg != null
-                ? lastMsg.getSenderId().equals(userLogin.getId().toString()) ? "Bạn: " + lastMsg.getContent()
+                ? lastMsg.getSenderId().equals(userLogin.getId()) ? "Bạn: " + lastMsg.getContent()
                         : lastMsg.getContent()
                 : "");
         lastMessageLabel.setFont(this.textFont);
@@ -440,12 +446,12 @@ public class Sidebar implements AppContext {
 
     private void createDirectDialogWithUser(UserMetadata targetUser) {
         List<String> participantIds = List.of(
-                userLogin.getId().toString(),
+                userLogin.getId(),
                 targetUser.getId());
 
         CreateGroupRequest request = new CreateGroupRequest(
                 targetUser.getName(),
-                userLogin.getId().toString(),
+                userLogin.getId(),
                 "direct",
                 participantIds);
 
@@ -518,13 +524,13 @@ public class Sidebar implements AppContext {
         // 2. Search user
         List<UserMetadata> matchedUsers = userStorage.values()
                 .stream()
-                .filter(user -> !user.getId().equals(userLogin.getId().toString()))
+                .filter(user -> !user.getId().equals(userLogin.getId()))
                 .filter(user -> user.getName().toLowerCase(locale).contains(keyword)
                         || user.getEmail().toLowerCase(locale).contains(keyword))
                 .toList();
 
         for (UserMetadata user : matchedUsers) {
-            Dialog directDialog = LocalStorage.findDirectDialog(userLogin.getId().toString(), user.getId());
+            Dialog directDialog = LocalStorage.findDirectDialog(userLogin.getId(), user.getId());
 
             if (directDialog != null) {
                 boolean alreadyAdded = matchedDialogs.stream()
@@ -549,7 +555,7 @@ public class Sidebar implements AppContext {
 
         if ("direct".equals(dialog.getType())) {
             for (UserMetadata userMetadata : dialog.getParticipants()) {
-                if (!userMetadata.getId().equals(userLogin.getId().toString())) {
+                if (!userMetadata.getId().equals(userLogin.getId())) {
                     return userMetadata.getName();
                 }
             }
@@ -572,14 +578,14 @@ public class Sidebar implements AppContext {
     public void loadUser() {
         userLogin = LocalStorage.getUserLogin();
         createGroupDialog.loadUser();
-        String userId = userLogin.getId().toString();
+        String userId = userLogin.getId();
 
         CountDownLatch countDownLatch1 = new CountDownLatch(1);
         CountDownLatch countDownLatch2 = new CountDownLatch(1);
         pendingObjects.put("load-dialogs" + userId, countDownLatch1);
         pendingObjects.put("fetch-users" + userId, countDownLatch2);
 
-        PacketService.loadUserDialogs(userLogin.getId().toString());
+        PacketService.loadUserDialogs(userLogin.getId());
 
         PacketService.fetchUsers(new SearchUserRequest("", userId, "all"));
 
@@ -623,7 +629,7 @@ public class Sidebar implements AppContext {
     }
 
     public synchronized void getResponse(UserDialogResponse userDialogResponse) {
-        String userId = userLogin.getId().toString();
+        String userId = userLogin.getId();
         CountDownLatch countDownLatch = pendingObjects.remove("load-dialogs" + userId);
 
         if (countDownLatch != null) {
@@ -655,7 +661,7 @@ public class Sidebar implements AppContext {
     }
 
     public synchronized void getResponse(CreateGroupResponse createGroupResponse) {
-        String userId = userLogin.getId().toString();
+        String userId = userLogin.getId();
         CountDownLatch countDownLatch = pendingObjects.remove("create-group" + userId);
 
         if (countDownLatch != null) {
@@ -687,7 +693,7 @@ public class Sidebar implements AppContext {
     }
 
     public synchronized void getResponse(SearchUserResponse searchUserResponse) {
-        String userId = userLogin.getId().toString();
+        String userId = userLogin.getId();
         CountDownLatch countDownLatch = pendingObjects.remove("fetch-users" + userId);
 
         if (countDownLatch != null) {
@@ -743,6 +749,13 @@ public class Sidebar implements AppContext {
         }
     }
 
+    // public synchronized void getResponse(FetchNewUserResponse
+    // fetchNewUserResponse) {
+    // if (fetchNewUserResponse.getStatus().equals("success")) {
+
+    // }
+    // }
+
     public synchronized void updateDialogTabLastMessage(String dialogId, Message lastMessage) {
         JPanel dialogTab = dialogTabMap.get(dialogId);
 
@@ -752,7 +765,7 @@ public class Sidebar implements AppContext {
 
             String lastMessageContent = lastMessage.getContent();
 
-            boolean isSender = lastMessage.getSenderId().equals(userLogin.getId().toString());
+            boolean isSender = lastMessage.getSenderId().equals(userLogin.getId());
 
             if (lastMessage.getType().equals("file")) {
                 lastMessageContent = (isSender) ? "Bạn đã gửi một file đính kèm" : "Đã gửi một file đính kèm";
@@ -780,7 +793,7 @@ public class Sidebar implements AppContext {
         AppContext context = appFrame.getContextPools().getContext(newContext);
         this.parent.setSize(context.getSize());
         this.parent.add(context.getRootComponent());
-        // this.parent.setLayout(null);
+        this.parent.revalidate();
         this.parent.repaint();
     }
 

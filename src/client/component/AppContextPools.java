@@ -28,4 +28,12 @@ public class AppContextPools {
     public void setContext(String name, AppContext context) {
         contextPool.put(name, context);
     }
+
+    public void reset(Container rootContainer) {
+        contextPool.clear();
+        contextPool.put("loginForm", new LoginForm(rootContainer));
+        contextPool.put("registerForm", new RegisterForm(rootContainer));
+        contextPool.put("mainMenu", new MainMenu(rootContainer));
+        contextPool.put("userProfile", new UserProfile(rootContainer));
+    }
 }

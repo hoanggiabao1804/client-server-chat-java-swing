@@ -40,6 +40,7 @@ public class PopupWindow implements AppContext {
         AppContext context = appFrame.getContextPools().getContext(newContext);
         this.frame.setSize(context.getSize());
         this.frame.add(context.getRootComponent());
+        this.frame.revalidate();
         this.frame.repaint();
     }
 

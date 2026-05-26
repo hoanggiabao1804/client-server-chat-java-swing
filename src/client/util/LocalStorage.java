@@ -14,6 +14,12 @@ public class LocalStorage {
     private static List<Dialog> userDialogs;
     private static Map<String, UserMetadata> users = new ConcurrentHashMap<>();
 
+    public synchronized static void reset() {
+        LocalStorage.userLogin = null;
+        LocalStorage.userDialogs = null;
+        LocalStorage.users = new ConcurrentHashMap<>();
+    }
+
     public synchronized static User getUserLogin() {
         return LocalStorage.userLogin;
     }

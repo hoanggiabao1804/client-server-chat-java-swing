@@ -2,7 +2,6 @@ package util;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.UUID;
 
 import constant.GenderEnum;
 import domain.User;
@@ -24,7 +23,7 @@ public class Parser {
         User user = new User();
 
         try {
-            user.setId(UUID.fromString(parts[0].strip()));
+            user.setId(parts[0].strip());
         } catch (Exception ex) {
             System.out.println(">>> ERROR: Failed to parse user's id.");
             return null;
@@ -60,7 +59,7 @@ public class Parser {
     }
 
     public static String toUserRow(User user) {
-        return String.format("%s\\%s\\%s\\%s\\%s\\%s\\%s\\%s", user.getId().toString(),
+        return String.format("%s\\%s\\%s\\%s\\%s\\%s\\%s\\%s", user.getId(),
                 user.getName(), user.getUsername(), user.getPassword(), user.getEmail(),
                 user.getDob().format(dateTimeFormatter),
                 user.getGender(), user.getCreatedAt().format(dateTimeFormatter));

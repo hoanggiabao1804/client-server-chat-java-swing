@@ -14,7 +14,9 @@ import domain.Dialog;
 import domain.FileMessage;
 import domain.Message;
 import domain.TextMessage;
+import domain.User;
 import domain.UserMetadata;
+import util.Mapper;
 
 public class RepositoryManager {
 
@@ -22,30 +24,17 @@ public class RepositoryManager {
 	private static UserRepository userRepository;
 	private static DialogRepository dialogRepository;
 	private static MessageRepository messageRepository;
-	// private static BookRepository bookRepository;
-	// private static ReaderRepository readerRepository;
-	// private static CallSlipRepository callSlipRepository;
-	// private static ReturnSlipRepository returnSlipRepository;
 
 	private RepositoryManager() {
 		userRepository = UserRepository.getInstance();
 		dialogRepository = DialogRepository.getInstance();
 		messageRepository = MessageRepository.getInstance();
-		// bookRepository = BookRepository.getInstance();
-		// readerRepository = ReaderRepository.getInstance();
-		// callSlipRepository = CallSlipRepository.getInstance();
-		// returnSlipRepository = ReturnSlipRepository.getInstance();
 
 		userRepository.importData("resource/users.txt");
 		messageRepository.importData("resource/messages/");
 		dialogRepository.importData("resource/dialogs.txt");
 		// fakeData();
 		// store();
-		// bookRepository.importData("resource/books.txt");
-		// readerRepository.importData("resource/readers.txt");
-		// GenreRepository.importData("resource/genres.txt");
-		// callSlipRepository.importData("resource/call_slips.txt");
-		// returnSlipRepository.importData("resource/return_slips.txt");
 	}
 
 	public static RepositoryManager getInstance() {
@@ -59,28 +48,60 @@ public class RepositoryManager {
 	public static void store() {
 		dialogRepository.exportData("resource/dialogs.txt");
 		messageRepository.exportData("resource/messages/");
-		// userRepository.exportData("resource/librarians.txt");
-		// bookRepository.exportData("resource/books.txt");
-		// readerRepository.exportData("resource/readers.txt");
-		// GenreRepository.exportData("resource/genres.txt");
-		// callSlipRepository.exportData("resource/call_slips.txt");
-		// returnSlipRepository.exportData("resource/return_slips.txt");
+		userRepository.exportData("resource/users.txt");
+	}
+
+	public static void exportUsers() {
+		userRepository.exportData("resource/users.txt");
+	}
+
+	public static void exportDialogs() {
+		dialogRepository.exportData("resource/dialogs.txt");
+	}
+
+	public static void exportMessages(String dialogId) {
+		messageRepository.exportMessages("resource/messages/", dialogId);
 	}
 
 	public static void fakeData() {
+		User user1 = new User(
+				UUID.randomUUID().toString(),
+				"admin",
+				"admin",
+				"admin",
+				"admin@example.com",
+				LocalDate.of(2000, 1, 1),
+				GenderEnum.MALE);
 
-		UserMetadata user1Metadata = new UserMetadata("019d7869-8821-7da1-9f04-53ff53d972dd", "admin",
-				"admin@example.com", LocalDate.of(2000, 1, 1), GenderEnum.MALE);
-		UserMetadata user2Metadata = new UserMetadata("727dfee5-0591-447d-bef0-5ee0f56089f5", "Hoàng Bảo",
-				"bao123@gmail.com", LocalDate.of(2000, 1, 2), GenderEnum.MALE);
+		User user2 = new User(
+				UUID.randomUUID().toString(),
+				"Hoàng Bảo",
+				"bao123",
+				"bao123",
+				"bao123@gmail.com",
+				LocalDate.of(2005, 1, 2),
+				GenderEnum.MALE);
+
+		User user3 = new User(
+				UUID.randomUUID().toString(),
+				"Nguyễn Văn An",
+				"an123",
+				"an123",
+				"an123@gmail.com",
+				LocalDate.of(2005, 5, 4),
+				GenderEnum.MALE);
+
+		UserMetadata user1Metadata = Mapper.userToUserMetadata(user1);
+		UserMetadata user2Metadata = Mapper.userToUserMetadata(user2);
+		UserMetadata user3Metadata = Mapper.userToUserMetadata(user3);
 
 		Dialog dialog1 = new Dialog(
 				UUID.randomUUID().toString(),
 				"admin",
 				List.of(user1Metadata),
 				new ArrayList<>(),
-				"single",
-				"019d7869-8821-7da1-9f04-53ff53d972dd");
+				"private",
+				user1.getId());
 
 		File bucket1 = new File("resource/buckets/" + dialog1.getId());
 		String bucket1MessageId = UUID.randomUUID().toString();
@@ -105,43 +126,43 @@ public class RepositoryManager {
 			bucket1FileSize = file1.length();
 		}
 
-		System.out.println("FIle1 size: " + bucket1FileSize + "bytes");
+		System.out.println("File1 size: " + bucket1FileSize + "bytes");
 
 		List<Message> messagesInDialog1 = List.of(
 				new TextMessage(UUID.randomUUID().toString(), dialog1.getId(), "Hello, how are you?",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
+						user1.getId(),
+						user1.getId(),
 						LocalDateTime.of(2026, 05, 15, 12, 31, 12), "sent"),
 				new TextMessage(UUID.randomUUID().toString(), dialog1.getId(),
 						"This is a text message.",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
+						user1.getId(),
+						user1.getId(),
 						LocalDateTime.of(2026, 05, 15, 12, 35, 54), "sent"),
 				new TextMessage(UUID.randomUUID().toString(), dialog1.getId(), "Uia, uia, uia.",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
+						user1.getId(),
+						user1.getId(),
 						LocalDateTime.of(2026, 05, 15, 16, 42, 22), "sent"),
 				new FileMessage(bucket1MessageId, dialog1.getId(), "file.txt", bucket1FileSize,
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
+						user1.getId(),
+						user1.getId(),
 						"resource/buckets/" + dialog1.getId() + "/" + bucket1MessageId + "-"
 								+ "file.txt",
 						LocalDateTime.of(2026, 05, 15, 17, 12, 45), "sent"),
 				new TextMessage(UUID.randomUUID().toString(), dialog1.getId(),
 						"Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
+						user1.getId(),
+						user1.getId(),
 						LocalDateTime.of(2026, 05, 15, 23, 19, 10), "sent"));
 
 		dialog1.setMessages(messagesInDialog1);
 
 		Dialog dialog2 = new Dialog(
 				UUID.randomUUID().toString(),
-				"Hoàng Bảo",
+				"",
 				List.of(user1Metadata, user2Metadata),
 				new ArrayList<>(),
 				"direct",
-				"019d7869-8821-7da1-9f04-53ff53d972dd");
+				user1.getId());
 
 		File bucket2 = new File("resource/buckets/" + dialog2.getId());
 		String bucket2MessageId = UUID.randomUUID().toString();
@@ -180,42 +201,64 @@ public class RepositoryManager {
 
 		List<Message> messagesInDialog2 = List.of(
 				new TextMessage(UUID.randomUUID().toString(), dialog2.getId(), "Hello, how are you?",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
-						"727dfee5-0591-447d-bef0-5ee0f56089f5",
+						user1.getId(),
+						user2.getId(),
 						LocalDateTime.of(2026, 05, 15, 12, 31, 12), "sent"),
 				new TextMessage(UUID.randomUUID().toString(), dialog2.getId(),
 						"Im fine, thank you! This is a text message.",
-						"727dfee5-0591-447d-bef0-5ee0f56089f5",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
+						user2.getId(),
+						user1.getId(),
 						LocalDateTime.of(2026, 05, 15, 12, 35, 54), "sent"),
 				new TextMessage(UUID.randomUUID().toString(), dialog2.getId(), "Uia, uia, uia.",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
-						"727dfee5-0591-447d-bef0-5ee0f56089f5",
+						user1.getId(),
+						user2.getId(),
 						LocalDateTime.of(2026, 05, 15, 16, 42, 22), "sent"),
 				new FileMessage(bucket2MessageId, dialog2.getId(), "file.txt", bucket2FileSize,
-						"727dfee5-0591-447d-bef0-5ee0f56089f5",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
+						user2.getId(),
+						user1.getId(),
 						"resource/buckets/" + dialog2.getId() + "/" + bucket2MessageId + "-"
 								+ "file.txt",
 						LocalDateTime.of(2026, 05, 15, 17, 12, 45), "sent"),
 				new TextMessage(UUID.randomUUID().toString(), dialog2.getId(),
 						"Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
-						"727dfee5-0591-447d-bef0-5ee0f56089f5",
+						user1.getId(),
+						user2.getId(),
 						LocalDateTime.of(2026, 05, 15, 23, 19, 10), "sent"),
 				new FileMessage(bucket3MessageId, dialog2.getId(), "helloworld.txt", bucket3FileSize,
-						"019d7869-8821-7da1-9f04-53ff53d972dd",
-						"727dfee5-0591-447d-bef0-5ee0f56089f5",
+						user1.getId(),
+						user2.getId(),
 						"resource/buckets/" + dialog2.getId() + "/" + bucket3MessageId + "-"
 								+ "helloworld.txt",
 						LocalDateTime.of(2026, 05, 15, 17, 12, 45), "sent"));
 
 		dialog2.setMessages(messagesInDialog2);
 
+		Dialog dialog3 = new Dialog(
+				UUID.randomUUID().toString(),
+				"Hoàng Bảo",
+				List.of(user2Metadata),
+				new ArrayList<>(),
+				"private",
+				user2.getId());
+
+		Dialog dialog4 = new Dialog(
+				UUID.randomUUID().toString(),
+				"Nguyễn Văn An",
+				List.of(user3Metadata),
+				new ArrayList<>(),
+				"private",
+				user3.getId());
+
+		userRepository.save(user1);
+		userRepository.save(user2);
+		userRepository.save(user3);
+
 		messagesInDialog1.forEach(message -> MessageRepository.getInstance().save(message));
 		messagesInDialog2.forEach(message -> MessageRepository.getInstance().save(message));
 
 		dialogRepository.save(dialog1);
 		dialogRepository.save(dialog2);
+		dialogRepository.save(dialog3);
+		dialogRepository.save(dialog4);
 	}
 }

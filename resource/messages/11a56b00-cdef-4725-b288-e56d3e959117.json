@@ -1,0 +1,48 @@
+[ {
+  "id" : "ff713c63-2478-4bf0-a1ad-1d7bd9ecc993",
+  "dialogId" : "11a56b00-cdef-4725-b288-e56d3e959117",
+  "content" : "Hello, how are you?",
+  "senderId" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97",
+  "receiverId" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97",
+  "timestamp" : "2026-05-15T12:31:12",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "308ec913-7bc4-4a50-bd32-1516de7cf85e",
+  "dialogId" : "11a56b00-cdef-4725-b288-e56d3e959117",
+  "content" : "This is a text message.",
+  "senderId" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97",
+  "receiverId" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97",
+  "timestamp" : "2026-05-15T12:35:54",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "106152c8-ffda-4d2e-a082-8500a415f372",
+  "dialogId" : "11a56b00-cdef-4725-b288-e56d3e959117",
+  "content" : "Uia, uia, uia.",
+  "senderId" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97",
+  "receiverId" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97",
+  "timestamp" : "2026-05-15T16:42:22",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "aa4eaa7a-e3b5-47c9-841e-be35e0aed805",
+  "dialogId" : "11a56b00-cdef-4725-b288-e56d3e959117",
+  "fileName" : "clear",
+  "fileSize" : 8310,
+  "senderId" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97",
+  "receiverId" : null,
+  "filePath" : "resource/buckets/11a56b00-cdef-4725-b288-e56d3e959117/aa4eaa7a-e3b5-47c9-841e-be35e0aed805-clear",
+  "timestamp" : "2026-05-26T11:16:03.644214033",
+  "tag" : "sent",
+  "type" : "file"
+}, {
+  "id" : "cc737c0e-eb5a-407d-811c-f5eba055651e",
+  "dialogId" : "11a56b00-cdef-4725-b288-e56d3e959117",
+  "content" : "Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "senderId" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97",
+  "receiverId" : null,
+  "timestamp" : "2026-05-26T11:16:30.800902919",
+  "tag" : "sent",
+  "type" : "text"
+} ]

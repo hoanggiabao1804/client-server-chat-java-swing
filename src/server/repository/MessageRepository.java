@@ -71,7 +71,23 @@ public class MessageRepository implements Repository {
                 objectMapper.writeValue(new File(filePath), messages);
             }
             System.out.println(
-                    ">>> Exported total " + dialogIdIndexedStorage.size() + " message(s) to directory '" + path + "'.");
+                    ">>> Exported total " + dialogIdIndexedStorage.size() + " dialog's message(s) to directory '" + path
+                            + "'.");
+        } catch (Exception ex) {
+            System.out.println(">>> ERROR: Failed to export messages to directory '" + path + "'.");
+            ex.printStackTrace();
+        }
+    }
+
+    public void exportMessages(String path, String dialogId) {
+        try {
+            List<Message> messages = dialogIdIndexedStorage.getOrDefault(dialogId, null);
+            if (messages != null) {
+                String filePath = path + dialogId + ".json";
+                objectMapper.writeValue(new File(filePath), messages);
+                System.out.println(
+                        ">>> Exported total 1 dialog's messages to directory '" + path + "'.");
+            }
         } catch (Exception ex) {
             System.out.println(">>> ERROR: Failed to export messages to directory '" + path + "'.");
             ex.printStackTrace();

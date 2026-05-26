@@ -10,7 +10,6 @@ import java.awt.Font;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -31,7 +30,6 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-import constant.GenderEnum;
 import domain.User;
 import domain.UserMetadata;
 import domain.dto.CreateGroupRequest;
@@ -40,15 +38,9 @@ import util.LocalStorage;
 public class CreateGroupDialog {
 	private Container parent;
 	private Dimension size;
-	private final Map<String, UserMetadata> userStorage;
+	private Map<String, UserMetadata> userStorage;
 	private final Locale locale = Locale.of("vi");
 	private User userLogin;
-
-	private UserMetadata user1Metadata = new UserMetadata("019d7869-8821-7da1-9f04-53ff53d972dd",
-			"adminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadminadmin",
-			"admin@example.com", LocalDate.of(2000, 1, 1), GenderEnum.MALE);
-	private UserMetadata user2Metadata = new UserMetadata("727dfee5-0591-447d-bef0-5ee0f56089f5", "Hoàng Bảo",
-			"bao123@gmail.com", LocalDate.of(2000, 1, 2), GenderEnum.MALE);
 
 	// Font & Color
 	private Font headerFont;
@@ -91,9 +83,6 @@ public class CreateGroupDialog {
 	private JButton cancelButton;
 
 	public CreateGroupDialog() {
-		this.userStorage = LocalStorage.getUsers();
-		this.userStorage.put(user1Metadata.getId(), user1Metadata);
-		this.userStorage.put(user2Metadata.getId(), user2Metadata);
 	}
 
 	public void init(Container parent) {
@@ -135,8 +124,7 @@ public class CreateGroupDialog {
 		usersScrollPane = new JScrollPane(usersPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		userList = new ArrayList<>();
-		checkBoxList = this.userStorage.values().stream().map(item -> createUserOptionTabPanel(item))
-				.collect(Collectors.toList());
+		checkBoxList = null;
 
 		// Footer initialization
 		submitButton = new JButton();
@@ -387,6 +375,10 @@ public class CreateGroupDialog {
 
 	private void search(String keyword) {
 		List<UserMetadata> searchedUsers = this.userStorage.values().stream().filter(item -> {
+			if (item.getId().equals(userLogin.getId())) {
+				return false;
+			}
+
 			if (keyword.isBlank()) {
 				return true;
 			}
@@ -429,12 +421,10 @@ public class CreateGroupDialog {
 		participantsErrorLabel.setVisible(false);
 
 		userList.clear();
-		checkBoxList = this.userStorage.values().stream().map(item -> createUserOptionTabPanel(item))
+		checkBoxList = this.userStorage.values().stream().filter(item -> !item.getId().equals(userLogin.getId()))
+				.map(item -> createUserOptionTabPanel(item))
 				.collect(Collectors.toList());
 		usersPanel.removeAll();
-		// for (int i = 0; i < 10; ++i) {
-		// usersPanel.add(createUserOptionTabPanel(user1Metadata));
-		// }
 		checkBoxList.forEach(usersPanel::add);
 		usersPanel.revalidate();
 		usersPanel.repaint();
@@ -443,6 +433,7 @@ public class CreateGroupDialog {
 
 	public void loadUser() {
 		userLogin = LocalStorage.getUserLogin();
+		this.userStorage = LocalStorage.getUsers();
 	}
 
 	public void draw() {
@@ -467,7 +458,7 @@ public class CreateGroupDialog {
 			return null;
 		}
 
-		return new CreateGroupRequest(groupNameTextField.getText().strip(), userLogin.getId().toString(), "group",
+		return new CreateGroupRequest(groupNameTextField.getText().strip(), userLogin.getId(), "group",
 				userList.stream().map(item -> item.getId()).collect(Collectors.toList()));
 	}
 }

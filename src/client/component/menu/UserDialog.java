@@ -229,7 +229,7 @@ public class UserDialog implements AppContext {
 
                 FileMessage fileMessage = new FileMessage(UUID.randomUUID().toString(),
                         dialog.getId(),
-                        selectedFile.getName(), selectedFile.length(), userLogin.getId().toString(), null,
+                        selectedFile.getName(), selectedFile.length(), userLogin.getId(), null,
                         null,
                         LocalDateTime.now(),
                         "sent");
@@ -237,7 +237,7 @@ public class UserDialog implements AppContext {
                 // Required an save action here:
 
                 PacketService
-                        .sendMessage(new SendMessageRequest(userLogin.getId().toString(), dialog.getId(), fileMessage));
+                        .sendMessage(new SendMessageRequest(userLogin.getId(), dialog.getId(), fileMessage));
 
                 PacketService.sendFile(selectedFile, fileMessage);
 
@@ -281,14 +281,14 @@ public class UserDialog implements AppContext {
 
             if (!messageInputField.getText().isBlank()) {
                 TextMessage textMessage = new TextMessage(UUID.randomUUID().toString(), dialog.getId(),
-                        messageInputField.getText().strip(), userLogin.getId().toString(), null, LocalDateTime.now(),
+                        messageInputField.getText().strip(), userLogin.getId(), null, LocalDateTime.now(),
                         "sent");
 
                 CountDownLatch countDownLatch = new CountDownLatch(1);
                 pendingObjects.put(textMessage.getId(), countDownLatch);
 
                 PacketService
-                        .sendMessage(new SendMessageRequest(userLogin.getId().toString(), dialog.getId(), textMessage));
+                        .sendMessage(new SendMessageRequest(userLogin.getId(), dialog.getId(), textMessage));
 
                 new Thread(() -> {
                     try {
@@ -327,11 +327,11 @@ public class UserDialog implements AppContext {
 
             if (!messageInputField.getText().isBlank()) {
                 TextMessage textMessage = new TextMessage(UUID.randomUUID().toString(), dialog.getId(),
-                        messageInputField.getText().strip(), userLogin.getId().toString(), null, LocalDateTime.now(),
+                        messageInputField.getText().strip(), userLogin.getId(), null, LocalDateTime.now(),
                         "sent");
                 pendingObjects.put(textMessage.getId(), countDownLatch);
                 PacketService
-                        .sendMessage(new SendMessageRequest(userLogin.getId().toString(), dialog.getId(), textMessage));
+                        .sendMessage(new SendMessageRequest(userLogin.getId(), dialog.getId(), textMessage));
 
                 JPanel textWrapper = createMessageWrapper(textMessage);
                 bodyContainer.add(textWrapper);
@@ -341,10 +341,10 @@ public class UserDialog implements AppContext {
                 messageInputField.setText("");
             } else {
                 IconMessage iconMessage = new IconMessage(UUID.randomUUID().toString(), dialog.getId(), "👍",
-                        userLogin.getId().toString(), null, "assets/like.png", LocalDateTime.now(), "sent");
+                        userLogin.getId(), null, "assets/like.png", LocalDateTime.now(), "sent");
                 pendingObjects.put(iconMessage.getId(), countDownLatch);
                 PacketService
-                        .sendMessage(new SendMessageRequest(userLogin.getId().toString(), dialog.getId(), iconMessage));
+                        .sendMessage(new SendMessageRequest(userLogin.getId(), dialog.getId(), iconMessage));
 
                 JPanel iconWrapper = createMessageWrapper(iconMessage);
                 bodyContainer.add(iconWrapper);
@@ -374,7 +374,7 @@ public class UserDialog implements AppContext {
     }
 
     private JPanel createMessageWrapper(Message message) {
-        boolean isMine = message.getSenderId().equals(userLogin.getId().toString());
+        boolean isMine = message.getSenderId().equals(userLogin.getId());
 
         JPanel wrapper = new JPanel(new BorderLayout());
         messageBubbleMap.put(message.getId(), wrapper);
@@ -525,7 +525,7 @@ public class UserDialog implements AppContext {
                 CountDownLatch countDownLatch = new CountDownLatch(1);
                 pendingObjects.put(originMessage.getId(), countDownLatch);
                 PacketService.deleteMessage(
-                        new DeleteMessageRequest(userLogin.getId().toString(), dialog.getId(), originMessage));
+                        new DeleteMessageRequest(userLogin.getId(), dialog.getId(), originMessage));
 
                 // bodyContainer.remove(wrapper);
                 wrapper.setVisible(false);
@@ -696,7 +696,7 @@ public class UserDialog implements AppContext {
             String dialogName = dialog.getName();
             if (dialog.getType().equals("direct")) {
                 for (UserMetadata userMetadata : dialog.getParticipants()) {
-                    if (!userMetadata.getId().equals(userLogin.getId().toString())) {
+                    if (!userMetadata.getId().equals(userLogin.getId())) {
                         dialogName = userMetadata.getName();
                         break;
                     }
@@ -729,7 +729,7 @@ public class UserDialog implements AppContext {
             String dialogName = dialog.getName();
             if (dialog.getType().equals("direct")) {
                 for (UserMetadata userMetadata : dialog.getParticipants()) {
-                    if (!userMetadata.getId().equals(userLogin.getId().toString())) {
+                    if (!userMetadata.getId().equals(userLogin.getId())) {
                         dialogName = userMetadata.getName();
                         break;
                     }
@@ -773,9 +773,7 @@ public class UserDialog implements AppContext {
         JComponent item = (JComponent) rowPanel.getComponent(2);
 
         if (sendMessageResponse.getStatus().equals("success")) {
-            // item.setBackground(new Color(0, 120, 255));
-            System.out.println("Called ");
-            item.setBackground(Color.green);
+            // System.out.println("Called ");
         } else {
             item.setBackground(Color.red);
             JOptionPane.showMessageDialog(null, sendMessageResponse.getMessage(),
@@ -943,7 +941,7 @@ public class UserDialog implements AppContext {
         AppContext context = appFrame.getContextPools().getContext(newContext);
         this.parent.setSize(context.getSize());
         this.parent.add(context.getRootComponent());
-        // this.parent.setLayout(null);
+        this.parent.revalidate();
         this.parent.repaint();
     }
 

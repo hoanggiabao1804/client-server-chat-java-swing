@@ -36,6 +36,7 @@ import domain.dto.CreateGroupResponse;
 import domain.dto.DeleteMessageRequest;
 import domain.dto.DeleteMessageResponse;
 import domain.dto.DialogContentResponse;
+import domain.dto.FetchNewUserResponse;
 import domain.dto.FileDownloadRequest;
 import domain.dto.FileDownloadResponse;
 import domain.dto.FileTransferRequest;
@@ -92,14 +93,15 @@ public class TCPServer {
         return onlineUsers.getOrDefault(userId, null);
     }
 
-    public static void broadcast(String message, ClientHandler sender) {
-        for (String clientId : onlineUsers.keySet()) {
-            ClientHandler client = onlineUsers.get(clientId);
-            if (client != sender) {
+    public static void broadcast(Packet packet, String senderId) {
+        for (String userId : onlineUsers.keySet()) {
+            ClientHandler client = onlineUsers.get(userId);
+            if (!userId.equals(senderId)) {
                 try {
+                    String message = objectMapper.writeValueAsString(packet);
                     client.send(message);
                 } catch (IOException ex) {
-                    onlineUsers.remove(clientId, client);
+                    onlineUsers.remove(userId, client);
                 }
             }
         }
@@ -192,7 +194,7 @@ class ClientHandler implements Runnable {
                             "auth");
 
                 } else {
-                    TCPServer.putToClientPool(foundUser.getId().toString(), this);
+                    TCPServer.putToClientPool(foundUser.getId(), this);
                     System.out.println("Successful to authenticate user.");
                     sentPacket = new Packet(
                             "localhost",
@@ -215,7 +217,7 @@ class ClientHandler implements Runnable {
                             "RegisterResponse",
                             "registry");
                 } else {
-                    user.setId(UUID.randomUUID());
+                    user.setId(UUID.randomUUID().toString());
                     User savedUser = UserRepository.getInstance().save(user);
                     DialogRepository.getInstance().save(new Dialog(
                             UUID.randomUUID().toString(),
@@ -223,15 +225,28 @@ class ClientHandler implements Runnable {
                             Arrays.asList(Mapper.userToUserMetadata(savedUser)),
                             new ArrayList<>(),
                             "private",
-                            savedUser.getId().toString()));
+                            savedUser.getId()));
+
+                    RepositoryManager.exportUsers();
+                    RepositoryManager.exportDialogs();
 
                     System.out.println("Successful to register user.");
                     sentPacket = new Packet(
                             "localhost",
                             30036,
-                            new RegisterResponse(savedUser.getId().toString(), "Đăng ký thành công.", "success"),
+                            new RegisterResponse(savedUser.getId(), "Đăng ký thành công.", "success"),
                             "RegisterResponse",
                             "registry");
+
+                    Packet newUserNotificationPacket = new Packet(
+                            "localhost",
+                            30036,
+                            new FetchNewUserResponse(Mapper.userToUserMetadata(savedUser),
+                                    "Người dùng mới đã được tạo.", "success"),
+                            "FetchNewUserResponse",
+                            "users/fetch-new");
+
+                    TCPServer.broadcast(newUserNotificationPacket, null);
                 }
 
                 break;
@@ -296,6 +311,10 @@ class ClientHandler implements Runnable {
                         "SendMessageResponse",
                         "dialogs/send");
 
+                if (!(message instanceof FileMessage)) {
+                    RepositoryManager.exportMessages(message.getDialogId());
+                }
+
                 Dialog dialog = DialogRepository.getInstance().findById(message.getDialogId());
 
                 TCPServer.multicast(sentPacket,
@@ -310,26 +329,28 @@ class ClientHandler implements Runnable {
                     String filePath = "resource/buckets/" + message1.getDialogId() + "/"
                             + message1.getId() + "-" + message1.getContent();
 
-                    // File fileToRemove = new File(filePath);
+                    File fileToRemove = new File(filePath);
 
-                    // if (fileToRemove.exists()) {
-                    // if (fileToRemove.delete()) {
-                    // System.out.println(">>> Deleted file '" + fileToRemove.getPath() + "'.");
-                    // } else {
-                    // System.out.println(">>> ERROR: Failed to delete file '" +
-                    // fileToRemove.getPath() + "'.");
-                    // sentPacket = new Packet(
-                    // "localhost",
-                    // 30036,
-                    // new DeleteMessageResponse(message1.getDialogId(), message1,
-                    // "Failed to delete message. File not found.", "failed"),
-                    // "DeleteMessageResponse",
-                    // "dialogs/delete");
-                    // }
-                    // }
+                    if (fileToRemove.exists()) {
+                        if (fileToRemove.delete()) {
+                            System.out.println(">>> Deleted file '" + fileToRemove.getPath() + "'.");
+                        } else {
+                            System.out.println(">>> ERROR: Failed to delete file '" +
+                                    fileToRemove.getPath() + "'.");
+                            sentPacket = new Packet(
+                                    "localhost",
+                                    30036,
+                                    new DeleteMessageResponse(message1.getDialogId(), message1,
+                                            "Failed to delete message. File not found.", "failed"),
+                                    "DeleteMessageResponse",
+                                    "dialogs/delete");
+                        }
+                    }
                 }
 
                 MessageRepository.getInstance().deleteById(message1.getId());
+
+                RepositoryManager.exportMessages(message1.getDialogId());
 
                 sentPacket = new Packet(
                         "localhost",
@@ -368,6 +389,7 @@ class ClientHandler implements Runnable {
                         fileUploadSession.close();
                         uploadSessions.remove(fileTransferRequest.getMessageId());
 
+                        RepositoryManager.exportMessages(fileTransferRequest.getDialogId());
                         System.out.println("Upload completed");
                     }
 
@@ -471,6 +493,8 @@ class ClientHandler implements Runnable {
 
                 Dialog saved = DialogRepository.getInstance().save(group);
 
+                RepositoryManager.exportDialogs();
+
                 sentPacket = new Packet(
                         "localhost",
                         30036,
@@ -499,7 +523,7 @@ class ClientHandler implements Runnable {
                 if (!searchUserRequest.getStatus().equals("all")) {
                     boolean isOnline = searchUserRequest.getStatus().equals("online");
                     foundUsers = foundUsers.stream().filter(item -> {
-                        String id = item.getId().toString();
+                        String id = item.getId();
                         return (isOnline) ? TCPServer.isOnline(id) : !TCPServer.isOnline(id);
                     }).collect(Collectors.toList());
                 }

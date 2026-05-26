@@ -36,7 +36,6 @@ import component.PopupWindow;
 import component.picker.DatePicker;
 import constant.GenderEnum;
 import domain.User;
-import util.Authentication;
 import util.FieldValidator;
 import util.LocalStorage;
 
@@ -143,7 +142,6 @@ public class UserProfile implements AppContext {
     public UserProfile(Container parent) {
         this.parent = parent;
         // this.size = size;
-        this.userLogin = Authentication.getInstance().getUserLogin();
 
         // Font & Color
         this.labelFont = new Font("Consolas", Font.BOLD, 20);
@@ -344,7 +342,7 @@ public class UserProfile implements AppContext {
         userIdRootContainer.add(userIdLabel, gbc1);
         userIdRootContainer.add(userIdTextLabel, gbc1);
 
-        userIdLabel.setText("Mã thủ thư");
+        userIdLabel.setText("Mã người dùng");
         userIdLabel.setFont(labelFont);
         userIdLabel.setBorder(new EmptyBorder(0, 0, 5, 0));
 
@@ -404,7 +402,7 @@ public class UserProfile implements AppContext {
         usernameRootContainer.add(usernameLabel);
         usernameRootContainer.add(usernameTextLabel);
 
-        usernameLabel.setText("Username");
+        usernameLabel.setText("Tên đăng nhập");
         usernameLabel.setFont(labelFont);
         usernameLabel.setBorder(new EmptyBorder(0, 35, 0, 0));
 
@@ -635,7 +633,7 @@ public class UserProfile implements AppContext {
     public void loadUser() {
         this.userLogin = LocalStorage.getUserLogin();
 
-        this.userIdTextLabel.setText(userLogin.getId().toString());
+        this.userIdTextLabel.setText(userLogin.getId());
         this.nameTextField.setText(userLogin.getName());
         this.usernameTextLabel.setText(userLogin.getUsername());
         this.passwordTextField.setText(userLogin.getPassword());
@@ -776,7 +774,7 @@ public class UserProfile implements AppContext {
         this.parent.setSize(context.getSize());
         this.parent.setMinimumSize(context.getSize());
         this.parent.add(context.getRootComponent());
-        // this.parent.setLayout(null);
+        this.parent.revalidate();
         this.parent.repaint();
     }
 

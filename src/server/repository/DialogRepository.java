@@ -1,6 +1,7 @@
 package repository;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,6 +55,9 @@ public class DialogRepository implements Repository {
             }
 
             System.out.println(">>> Imported total " + dialogs.size() + " dialog(s) from directory '" + path + "'.");
+        } catch (FileNotFoundException ex) {
+            System.out.println(">>> ERROR: File name '" + path + "' not found.");
+            ex.printStackTrace();
         } catch (Exception ex) {
             System.out.println(">>> ERROR: Failed to import dialogs from directory '" + path + "'.");
             ex.printStackTrace();

@@ -1,21 +1,19 @@
 package repository;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 
 import domain.User;
-import util.Parser;
+import util.ObjectMapperFactory;
 
 public class UserRepository implements Repository {
 
@@ -26,8 +24,7 @@ public class UserRepository implements Repository {
     private static final Map<String, User> usernameIndexedStorage = new HashMap<>();
 
     private UserRepository() {
-        this.objectMapper = new ObjectMapper();
-        objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+        this.objectMapper = ObjectMapperFactory.create();
     }
 
     public static UserRepository getInstance() {
@@ -40,29 +37,41 @@ public class UserRepository implements Repository {
 
     public void importData(String path) {
         try {
-            BufferedReader br = new BufferedReader(new FileReader(path));
+            // BufferedReader br = new BufferedReader(new FileReader(path));
 
-            String line;
-            int lineCount = 0;
+            // String line;
+            // int lineCount = 0;
 
-            br.readLine(); // Ignore the header line
-            while ((line = br.readLine()) != null) {
-                User parsedUser = Parser.parseUser(line);
+            // br.readLine(); // Ignore the header line
+            // while ((line = br.readLine()) != null) {
+            // User parsedUser = Parser.parseUser(line);
 
-                if (parsedUser != null) {
-                    storage.put(parsedUser.getId().toString(), parsedUser);
-                    usernameIndexedStorage.put(parsedUser.getUsername(), parsedUser);
-                } else {
-                    System.out.println(">>> ERROR: Failed to parse user at line " + lineCount);
-                    --lineCount;
-                }
+            // if (parsedUser != null) {
+            // storage.put(parsedUser.getId(), parsedUser);
+            // usernameIndexedStorage.put(parsedUser.getUsername(), parsedUser);
+            // } else {
+            // System.out.println(">>> ERROR: Failed to parse user at line " + lineCount);
+            // --lineCount;
+            // }
 
-                ++lineCount;
-            }
+            // ++lineCount;
+            // }
 
-            System.out.println(">>> Parsed total " + lineCount + " user(s) from file '" + path + "'.");
+            // System.out.println(">>> Parsed total " + lineCount + " user(s) from file '" +
+            // path + "'.");
 
-            br.close();
+            // br.close();
+            File file = new File(path);
+
+            List<User> users = objectMapper.readValue(file, new TypeReference<List<User>>() {
+            });
+
+            storage.putAll(users.stream().collect(Collectors.toMap(User::getId, user -> user)));
+
+            users.forEach(item -> usernameIndexedStorage.put(item.getUsername(), item));
+
+            System.out.println(">>> Imported total " + users.size() + " user(s) from directory '" + path + "'.");
+
         } catch (FileNotFoundException ex) {
             System.out.println(">>> ERROR: File name '" + path + "' not found.");
             ex.printStackTrace();
@@ -73,20 +82,22 @@ public class UserRepository implements Repository {
     }
 
     public void exportData(String path) {
+        List<User> users = new ArrayList<>(storage.values());
         try {
-            BufferedWriter bw = new BufferedWriter(new FileWriter(path));
+            // BufferedWriter bw = new BufferedWriter(new FileWriter(path));
 
-            bw.write("id\\name\\username\\password\\email\\dob\\gender\\createdAt\n");
-            for (User user : storage.values()) {
-                bw.write(Parser.toUserRow(user) + "\n");
-            }
+            // bw.write("id\\name\\username\\password\\email\\dob\\gender\\createdAt\n");
+            // for (User user : storage.values()) {
+            // bw.write(Parser.toUserRow(user) + "\n");
+            // }
 
-            System.out.println(">>> Written total " + storage.size() + " user(s) to file '" + path + "'.");
+            // System.out.println(">>> Written total " + storage.size() + " user(s) to file
+            // '" + path + "'.");
 
-            bw.close();
-        } catch (FileNotFoundException ex) {
-            System.out.println(">>> ERROR: File name '" + path + "' not found.");
-            ex.printStackTrace();
+            // bw.close();
+            File file = new File(path);
+            objectMapper.writeValue(file, users);
+            System.out.println(">>> Exported total " + storage.size() + " user(s) to directory '" + path + "'.");
         } catch (IOException ex) {
             System.out.println(">>> ERROR: Failed to import user from file '" + path + "'.");
             ex.printStackTrace();
@@ -110,7 +121,7 @@ public class UserRepository implements Repository {
     }
 
     public User save(User user) {
-        String id = user.getId().toString();
+        String id = user.getId();
 
         if (storage.containsKey(id)) {
             User currentUser = storage.get(id);

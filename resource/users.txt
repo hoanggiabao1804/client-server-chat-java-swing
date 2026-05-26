@@ -1,4 +1,28 @@
-id\name\username\password\email\dob\gender\createdAt
-019d7869-8821-7da1-9f04-53ff53d972dd\admin\admin\admin\admin@example.com\01-01-2000\MALE\20-03-2020
-727dfee5-0591-447d-bef0-5ee0f56089f5\Hoàng Bảo\bao123\bao123\bao123@gmail.com\02-01-2005\MALE\17-04-2026
-62c40b75-a24a-4aa1-821a-bd9c61e4229a\Nguyễn Văn An\an123\an123\an0305@gmail.com\04-05-2005\MALE\17-04-2026
+[ {
+  "id" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97",
+  "name" : "admin",
+  "username" : "admin",
+  "password" : "admin",
+  "email" : "admin@example.com",
+  "dob" : "2000-01-01",
+  "gender" : "MALE",
+  "createdAt" : "2026-05-26"
+}, {
+  "id" : "0164abaa-811f-4055-8955-f3cf3e1938db",
+  "name" : "Hoàng Bảo",
+  "username" : "bao123",
+  "password" : "bao123",
+  "email" : "bao123@gmail.com",
+  "dob" : "2005-01-02",
+  "gender" : "MALE",
+  "createdAt" : "2026-05-26"
+}, {
+  "id" : "c357dfde-3929-46a6-a2d0-6ec6fdc6696e",
+  "name" : "Nguyễn Văn An",
+  "username" : "an123",
+  "password" : "an123",
+  "email" : "an123@gmail.com",
+  "dob" : "2005-05-04",
+  "gender" : "MALE",
+  "createdAt" : "2026-05-26"
+} ]

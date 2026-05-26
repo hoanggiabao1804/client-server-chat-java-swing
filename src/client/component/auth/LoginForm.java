@@ -494,7 +494,11 @@ public class LoginForm implements AppContext {
     public void draw() {
         this.parent.setSize(this.getSize());
         this.parent.setMinimumSize(this.getSize());
+
         this.parent.add(this.loginForm);
+
+        this.parent.revalidate();
+        this.parent.repaint();
     }
 
     @Override
@@ -506,6 +510,7 @@ public class LoginForm implements AppContext {
         this.parent.setSize(context.getSize());
         // this.parent.setLayout(null);
         this.parent.add(context.getRootComponent());
+        this.parent.revalidate();
         this.parent.repaint();
     }
 

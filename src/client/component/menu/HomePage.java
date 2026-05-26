@@ -207,6 +207,7 @@ public class HomePage implements AppContext {
         AppContext context = appFrame.getContextPools().getContext(newContext);
         this.parent.setSize(context.getSize());
         this.parent.add(context.getRootComponent());
+        this.parent.revalidate();
         this.parent.repaint();
     }
 
