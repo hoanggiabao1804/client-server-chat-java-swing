@@ -20,6 +20,7 @@ import javax.swing.border.EmptyBorder;
 
 import domain.Dialog;
 import domain.UserMetadata;
+import util.LocalStorage;
 
 public class InformationDialog {
     private Container parent;
@@ -159,8 +160,8 @@ public class InformationDialog {
     public void loadDialog(Dialog dialog) {
         bodyContainer.removeAll();
 
-        for (UserMetadata userMetadata : dialog.getParticipants()) {
-            bodyContainer.add(createUserInfoPanel(userMetadata));
+        for (String userId : dialog.getParticipants()) {
+            bodyContainer.add(createUserInfoPanel(LocalStorage.getUserById(userId)));
         }
 
         bodyContainer.revalidate();

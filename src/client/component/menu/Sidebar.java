@@ -146,8 +146,7 @@ public class Sidebar implements AppContext {
             CreateGroupRequest createGroupRequest = createGroupDialog.submit();
             if (createGroupRequest != null) {
                 System.out.println("New group");
-                List<UserMetadata> participants = createGroupRequest.getParticipantIds().stream()
-                        .map(item -> LocalStorage.getUserById(item)).collect(Collectors.toList());
+                List<String> participants = createGroupRequest.getParticipantIds();
                 Dialog newDialog = new Dialog("temp", createGroupRequest.getGroupName(), participants,
                         new ArrayList<>(), "group",
                         createGroupRequest.getCreatorId());
@@ -172,8 +171,8 @@ public class Sidebar implements AppContext {
                             SwingUtilities.invokeLater(() -> {
                                 JOptionPane.showMessageDialog(
                                         null,
-                                        "Server không phản hồi!",
                                         "Tạo nhóm thất bại",
+                                        "Server không phản hồi!",
                                         JOptionPane.ERROR_MESSAGE);
                             });
                         }
@@ -209,19 +208,48 @@ public class Sidebar implements AppContext {
         headerContainer.add(labelContainer, gbc);
         headerContainer.add(searchContainer, gbc);
 
-        labelContainer.setLayout(new FlowLayout(FlowLayout.LEFT));
-        labelContainer.setPreferredSize(new Dimension(size.width, 60));
+        // labelContainer.setLayout(new FlowLayout(FlowLayout.LEFT));
+        // labelContainer.setPreferredSize(new Dimension(size.width, 60));
+        // labelContainer.setBackground(Color.white);
+        // labelContainer.add(headerLabel);
+        // labelContainer.add(createGroupButton);
+
+        labelContainer.setLayout(new BorderLayout());
+        labelContainer.setPreferredSize(new Dimension(size.width, 75));
         labelContainer.setBackground(Color.white);
-        labelContainer.add(headerLabel);
-        labelContainer.add(createGroupButton);
+        labelContainer.setBorder(new EmptyBorder(0, 10, 0, 10));
+
+        // JPanel createGroupButtonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT,
+        // 0, 10));
+        // createGroupButtonWrapper.setOpaque(false);
+        // createGroupButtonWrapper.add(createGroupButton);
+        JPanel createGroupButtonWrapper = new JPanel(new GridBagLayout());
+        createGroupButtonWrapper.setOpaque(false);
+        createGroupButtonWrapper.add(createGroupButton);
+
+        labelContainer.add(headerLabel, BorderLayout.WEST);
+        labelContainer.add(createGroupButtonWrapper, BorderLayout.EAST);
 
         headerLabel.setText("Đoạn chat");
         headerLabel.setFont(this.headerFont);
         headerLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
 
+        // createGroupButton.setText("Tạo nhóm");
+        // createGroupButton.setFocusable(false);
+        // createGroupButton.setIcon(createGroupIcon);
+        // createGroupButton.addActionListener(l -> {
+        // System.out.println("Create group");
+        // createGroupDialog.reset();
+        // createGroupDialog.draw();
+        // createGroupPopupWindow.draw();
+        // });
+
         createGroupButton.setText("Tạo nhóm");
         createGroupButton.setFocusable(false);
         createGroupButton.setIcon(createGroupIcon);
+        createGroupButton.setPreferredSize(new Dimension(130, 35));
+        createGroupButton.setMinimumSize(new Dimension(130, 35));
+        createGroupButton.setMaximumSize(new Dimension(130, 35));
         createGroupButton.addActionListener(l -> {
             System.out.println("Create group");
             createGroupDialog.reset();
@@ -229,11 +257,19 @@ public class Sidebar implements AppContext {
             createGroupPopupWindow.draw();
         });
 
-        searchContainer.setLayout(new FlowLayout());
+        // searchContainer.setLayout(new FlowLayout());
+        // searchContainer.setPreferredSize(new Dimension(size.width - 20, 45));
+        // searchContainer.setBackground(Color.white);
+        // searchContainer.add(searchTextField);
+        // searchContainer.add(searchButton);
+
+        searchContainer.setLayout(new BorderLayout(8, 0));
         searchContainer.setPreferredSize(new Dimension(size.width - 20, 45));
+        searchContainer.setBorder(new EmptyBorder(5, 10, 5, 10));
         searchContainer.setBackground(Color.white);
-        searchContainer.add(searchTextField);
-        searchContainer.add(searchButton);
+
+        searchContainer.add(searchTextField, BorderLayout.CENTER);
+        searchContainer.add(searchButton, BorderLayout.EAST);
 
         searchTextField.setPreferredSize(new Dimension(size.width - 90, 35));
         searchTextField.setFont(this.textFont);
@@ -246,6 +282,7 @@ public class Sidebar implements AppContext {
         });
 
         searchButton.setIcon(searchIcon);
+        searchButton.setPreferredSize(new Dimension(50, 35));
         searchButton.setFocusable(false);
         searchButton.addActionListener(l -> {
             String keyword = searchTextField.getText().strip();
@@ -274,6 +311,11 @@ public class Sidebar implements AppContext {
         JPanel avatarPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         RoundButton avatarButton = new RoundButton();
         ImageIcon avatarIcon = null;
+
+        if (selectedDialog != null && selectedDialog.getId().equals(dialog.getId())) {
+            selectedDialog = dialog;
+            selectedDialogTab = rootPanel;
+        }
 
         if (dialog.getType().equals("private")) {
             avatarIcon = new ImageIcon("assets/user-lock.png");
@@ -352,25 +394,42 @@ public class Sidebar implements AppContext {
 
         String dialogName = dialog.getName();
         if (dialog.getType().equals("direct")) {
-            for (UserMetadata userMetadata : dialog.getParticipants()) {
-                if (!userMetadata.getId().equals(userLogin.getId())) {
-                    dialogName = userMetadata.getName();
+            for (String userId : dialog.getParticipants()) {
+                if (!userId.equals(userLogin.getId())) {
+                    dialogName = userStorage.get(userId).getName();
                     break;
                 }
             }
+        } else if (dialog.getType().equals("private")) {
+            dialogName = userStorage.get(dialog.getParticipants().get(0)).getName();
         }
 
         nameLabel.setText(dialogName);
         nameLabel.setFont(this.tabFont);
 
+        if (dialog.getType().equals("private")) {
+            nameLabel.setFont(new Font("Consolas", Font.ITALIC, 20));
+            nameLabel.setForeground(new Color(0, 129, 138));
+        }
+
         // lastMessageLabel.setPreferredSize(labelSize);
-        Message lastMsg = dialog.getMessages() == null || dialog.getMessages().isEmpty() ? null
+        Message lastMessage = dialog.getMessages() == null || dialog.getMessages().isEmpty() ? null
                 : dialog.getMessages().getLast();
 
-        lastMessageLabel.setText(lastMsg != null
-                ? lastMsg.getSenderId().equals(userLogin.getId()) ? "Bạn: " + lastMsg.getContent()
-                        : lastMsg.getContent()
-                : "");
+        if (lastMessage != null) {
+            String lastMessageContent = lastMessage.getContent();
+
+            boolean isSender = lastMessage.getSenderId().equals(userLogin.getId());
+
+            if (lastMessage.getType().equals("file")) {
+                lastMessageContent = (isSender) ? "Bạn đã gửi một file đính kèm" : "Đã gửi một file đính kèm";
+            } else {
+                lastMessageContent = (isSender) ? "Bạn: " + lastMessageContent : lastMessageContent;
+            }
+
+            lastMessageLabel.setText(lastMessageContent);
+        }
+
         lastMessageLabel.setFont(this.textFont);
 
         contentPanel.add(nameLabel);
@@ -423,6 +482,9 @@ public class Sidebar implements AppContext {
 
         addButton.addActionListener(e -> {
             createDirectDialogWithUser(userMetadata);
+            bodyContainer.remove(rootPanel);
+            bodyContainer.revalidate();
+            bodyContainer.repaint();
         });
 
         rootPanel.add(avatarPanel, BorderLayout.WEST);
@@ -554,9 +616,9 @@ public class Sidebar implements AppContext {
         String dialogName = dialog.getName();
 
         if ("direct".equals(dialog.getType())) {
-            for (UserMetadata userMetadata : dialog.getParticipants()) {
-                if (!userMetadata.getId().equals(userLogin.getId())) {
-                    return userMetadata.getName();
+            for (String userId : dialog.getParticipants()) {
+                if (!userId.equals(userLogin.getId())) {
+                    return userStorage.get(userId).getName();
                 }
             }
         }
@@ -597,8 +659,8 @@ public class Sidebar implements AppContext {
                     SwingUtilities.invokeLater(() -> {
                         JOptionPane.showMessageDialog(
                                 null,
-                                "Server không phản hồi!",
                                 "Tải danh sách hội thoại không thành công",
+                                "Server không phản hồi!",
                                 JOptionPane.ERROR_MESSAGE);
                     });
                 }
@@ -616,8 +678,8 @@ public class Sidebar implements AppContext {
                     SwingUtilities.invokeLater(() -> {
                         JOptionPane.showMessageDialog(
                                 null,
-                                "Server không phản hồi!",
                                 "Tải danh sách người dùng không thành công",
+                                "Server không phản hồi!",
                                 JOptionPane.ERROR_MESSAGE);
                     });
                 }
@@ -742,9 +804,7 @@ public class Sidebar implements AppContext {
             if (dialog != null) {
                 Message lastMessage = dialog.getMessages().isEmpty() ? null : dialog.getMessages().getLast();
 
-                if (lastMessage != null) {
-                    updateDialogTabLastMessage(dialogId, lastMessage);
-                }
+                updateDialogTabLastMessage(dialogId, lastMessage);
             }
         }
     }
@@ -762,20 +822,18 @@ public class Sidebar implements AppContext {
         if (dialogTab != null) {
             JPanel contentPanel = (JPanel) dialogTab.getComponent(1);
             JLabel lastMessageLabel = (JLabel) contentPanel.getComponent(1);
+            String lastMessageContent = lastMessage != null ? lastMessage.getContent() : null;
+            if (lastMessageContent != null) {
+                boolean isSender = lastMessage.getSenderId().equals(userLogin.getId());
 
-            String lastMessageContent = lastMessage.getContent();
-
-            boolean isSender = lastMessage.getSenderId().equals(userLogin.getId());
-
-            if (lastMessage.getType().equals("file")) {
-                lastMessageContent = (isSender) ? "Bạn đã gửi một file đính kèm" : "Đã gửi một file đính kèm";
-            } else {
-                lastMessageContent = (isSender) ? "Bạn: " + lastMessageContent : lastMessageContent;
+                if (lastMessage.getType().equals("file")) {
+                    lastMessageContent = (isSender) ? "Bạn đã gửi một file đính kèm" : "Đã gửi một file đính kèm";
+                } else {
+                    lastMessageContent = (isSender) ? "Bạn: " + lastMessageContent : lastMessageContent;
+                }
             }
 
             lastMessageLabel.setText(lastMessageContent);
-
-            System.out.println("Updated!!!");
         }
     }
 

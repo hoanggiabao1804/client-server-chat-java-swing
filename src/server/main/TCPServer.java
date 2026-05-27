@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import domain.Dialog;
 import domain.FileMessage;
 import domain.Message;
+import domain.Packet;
 import domain.User;
 import domain.UserMetadata;
 import domain.dto.AuthRequest;
@@ -42,12 +43,14 @@ import domain.dto.FileDownloadResponse;
 import domain.dto.FileTransferRequest;
 import domain.dto.FileTransferResponse;
 import domain.dto.FileUploadSession;
+import domain.dto.NetworkConfig;
 import domain.dto.RegisterResponse;
 import domain.dto.SearchUserRequest;
 import domain.dto.SearchUserResponse;
 import domain.dto.SendMessageRequest;
 import domain.dto.SendMessageResponse;
 import domain.dto.UserDialogResponse;
+import domain.dto.UserUpdateResponse;
 import repository.DialogRepository;
 import repository.MessageRepository;
 import repository.RepositoryManager;
@@ -64,8 +67,9 @@ public class TCPServer {
 
         RepositoryManager.getInstance();
         ExecutorService pool = Executors.newCachedThreadPool();
+        NetworkConfig networkConfig = loadConfig();
 
-        try (ServerSocket serverSocket = new ServerSocket(30036)) {
+        try (ServerSocket serverSocket = new ServerSocket(networkConfig.getPort())) {
             do {
                 Socket socket = serverSocket.accept();
 
@@ -120,6 +124,24 @@ public class TCPServer {
                 }
             }
         });
+    }
+
+    private static NetworkConfig loadConfig() {
+        try {
+            File file = new File("server-config/config.json");
+
+            NetworkConfig config = objectMapper.readValue(file, NetworkConfig.class);
+
+            return config;
+        } catch (FileNotFoundException ex) {
+            System.out.println(">>> ERROR: File name server-config/config.json not found.");
+            ex.printStackTrace();
+        } catch (Exception ex) {
+            System.out.println(">>> ERROR: Failed to load server config.");
+            ex.printStackTrace();
+        }
+
+        return new NetworkConfig("localhost", 30036);
     }
 }
 
@@ -187,8 +209,8 @@ class ClientHandler implements Runnable {
                 if (!result.isEmpty()) {
                     System.out.println("Authentication fail with error: " + result);
                     sentPacket = new Packet(
-                            "localhost",
-                            30036,
+                            socket.getInetAddress().getHostAddress(),
+                            socket.getPort(),
                             new AuthResponse(null, result, "failed"),
                             "AuthResponse",
                             "auth");
@@ -197,8 +219,8 @@ class ClientHandler implements Runnable {
                     TCPServer.putToClientPool(foundUser.getId(), this);
                     System.out.println("Successful to authenticate user.");
                     sentPacket = new Packet(
-                            "localhost",
-                            30036,
+                            socket.getInetAddress().getHostAddress(),
+                            socket.getPort(),
                             new AuthResponse(foundUser, "Authenticate successful.", "success"),
                             "AuthResponse",
                             "auth");
@@ -211,8 +233,8 @@ class ClientHandler implements Runnable {
                 if (UserRepository.getInstance().findByUsername(user.getUsername()) != null) {
                     System.out.println("Registration fail with error: Username is already taken.");
                     sentPacket = new Packet(
-                            "localhost",
-                            30036,
+                            socket.getInetAddress().getHostAddress(),
+                            socket.getPort(),
                             new RegisterResponse(null, "Tên đăng nhập đã tồn tại.", "failed"),
                             "RegisterResponse",
                             "registry");
@@ -222,7 +244,7 @@ class ClientHandler implements Runnable {
                     DialogRepository.getInstance().save(new Dialog(
                             UUID.randomUUID().toString(),
                             savedUser.getName(),
-                            Arrays.asList(Mapper.userToUserMetadata(savedUser)),
+                            Arrays.asList(savedUser.getId()),
                             new ArrayList<>(),
                             "private",
                             savedUser.getId()));
@@ -232,15 +254,15 @@ class ClientHandler implements Runnable {
 
                     System.out.println("Successful to register user.");
                     sentPacket = new Packet(
-                            "localhost",
-                            30036,
+                            socket.getInetAddress().getHostAddress(),
+                            socket.getPort(),
                             new RegisterResponse(savedUser.getId(), "Đăng ký thành công.", "success"),
                             "RegisterResponse",
                             "registry");
 
                     Packet newUserNotificationPacket = new Packet(
-                            "localhost",
-                            30036,
+                            socket.getInetAddress().getHostAddress(),
+                            socket.getPort(),
                             new FetchNewUserResponse(Mapper.userToUserMetadata(savedUser),
                                     "Người dùng mới đã được tạo.", "success"),
                             "FetchNewUserResponse",
@@ -258,8 +280,8 @@ class ClientHandler implements Runnable {
                 if (userDialogs == null) {
                     System.out.println("Fetch user dialogs failed!");
                     sentPacket = new Packet(
-                            "localhost",
-                            30036,
+                            socket.getInetAddress().getHostAddress(),
+                            socket.getPort(),
                             new UserDialogResponse(userDialogs, "Failed to fetch dialog list of user '" + userId + "'.",
                                     "failed"),
                             "UserDialogResponse",
@@ -267,8 +289,8 @@ class ClientHandler implements Runnable {
                 } else {
                     System.out.println("UserDialogs size: " + userDialogs.size());
                     sentPacket = new Packet(
-                            "localhost",
-                            30036,
+                            socket.getInetAddress().getHostAddress(),
+                            socket.getPort(),
                             new UserDialogResponse(userDialogs, "Fetch user '" + userId + "' dialogs successful.",
                                     "success"),
                             "UserDialogResponse",
@@ -282,8 +304,8 @@ class ClientHandler implements Runnable {
                 List<Message> messages = MessageRepository.getInstance().findByDialogId(dialogId);
                 System.out.println("Dialog messages size: " + messages.size());
                 sentPacket = new Packet(
-                        "localhost",
-                        30036,
+                        socket.getInetAddress().getHostAddress(),
+                        socket.getPort(),
                         new DialogContentResponse(dialogId, messages,
                                 "Fetch message list for dialog '" + dialogId + "' successful.", "success"),
                         "DialogContentResponse", "dialogs/id");
@@ -304,8 +326,8 @@ class ClientHandler implements Runnable {
                 System.out.println("Message content: " + messagePersisted.getContent());
 
                 sentPacket = new Packet(
-                        "localhost",
-                        30036,
+                        socket.getInetAddress().getHostAddress(),
+                        socket.getPort(),
                         new SendMessageResponse(messagePersisted.getDialogId(), messagePersisted,
                                 "Message is sent successful.", "success"),
                         "SendMessageResponse",
@@ -317,8 +339,7 @@ class ClientHandler implements Runnable {
 
                 Dialog dialog = DialogRepository.getInstance().findById(message.getDialogId());
 
-                TCPServer.multicast(sentPacket,
-                        dialog.getParticipants().stream().map(item -> item.getId()).collect(Collectors.toList()));
+                TCPServer.multicast(sentPacket, dialog.getParticipants());
                 return;
             case "dialogs/delete":
                 DeleteMessageRequest deleteMessageRequest = objectMapper.convertValue(packet.getData(),
@@ -338,8 +359,8 @@ class ClientHandler implements Runnable {
                             System.out.println(">>> ERROR: Failed to delete file '" +
                                     fileToRemove.getPath() + "'.");
                             sentPacket = new Packet(
-                                    "localhost",
-                                    30036,
+                                    socket.getInetAddress().getHostAddress(),
+                                    socket.getPort(),
                                     new DeleteMessageResponse(message1.getDialogId(), message1,
                                             "Failed to delete message. File not found.", "failed"),
                                     "DeleteMessageResponse",
@@ -353,8 +374,8 @@ class ClientHandler implements Runnable {
                 RepositoryManager.exportMessages(message1.getDialogId());
 
                 sentPacket = new Packet(
-                        "localhost",
-                        30036,
+                        socket.getInetAddress().getHostAddress(),
+                        socket.getPort(),
                         new DeleteMessageResponse(message1.getDialogId(), message1,
                                 "Message is deleted successful.", "success"),
                         "DeleteMessageResponse",
@@ -362,8 +383,7 @@ class ClientHandler implements Runnable {
 
                 Dialog dialog1 = DialogRepository.getInstance().findById(message1.getDialogId());
 
-                TCPServer.multicast(sentPacket,
-                        dialog1.getParticipants().stream().map(item -> item.getId()).collect(Collectors.toList()));
+                TCPServer.multicast(sentPacket, dialog1.getParticipants());
                 return;
             case "dialogs/upload":
                 FileTransferRequest fileTransferRequest = objectMapper.convertValue(packet.getData(),
@@ -394,8 +414,8 @@ class ClientHandler implements Runnable {
                     }
 
                     sentPacket = new Packet(
-                            "localhost",
-                            30036,
+                            socket.getInetAddress().getHostAddress(),
+                            socket.getPort(),
                             new FileTransferResponse(fileTransferRequest.getDialogId(),
                                     fileTransferRequest.getMessageId(), fileTransferRequest.getFileName(),
                                     fileTransferRequest.getFileSize(), fileUploadSession.getReceivedBytes(),
@@ -405,13 +425,30 @@ class ClientHandler implements Runnable {
 
                 } catch (IOException ex) {
                     System.out.println("Failed to write file.");
+                    long receivedBytes = fileUploadSession != null
+                            ? fileUploadSession.getReceivedBytes()
+                            : 0L;
+
+                    if (fileUploadSession != null) {
+                        try {
+                            fileUploadSession.close();
+                        } catch (IOException ignored) {
+                        }
+
+                        uploadSessions.remove(fileTransferRequest.getMessageId());
+                    }
+
                     sentPacket = new Packet(
-                            "localhost",
-                            30036,
-                            new FileTransferResponse(fileTransferRequest.getDialogId(),
-                                    fileTransferRequest.getMessageId(), fileTransferRequest.getFileName(),
-                                    fileTransferRequest.getFileSize(), fileUploadSession.getReceivedBytes(),
-                                    "Chunk is corrupted.", "failed"),
+                            socket.getInetAddress().getHostAddress(),
+                            socket.getPort(),
+                            new FileTransferResponse(
+                                    fileTransferRequest.getDialogId(),
+                                    fileTransferRequest.getMessageId(),
+                                    fileTransferRequest.getFileName(),
+                                    fileTransferRequest.getFileSize(),
+                                    receivedBytes,
+                                    "Chunk is corrupted: " + ex.getMessage(),
+                                    "failed"),
                             "FileTransferResponse",
                             "dialogs/upload");
 
@@ -477,27 +514,27 @@ class ClientHandler implements Runnable {
                     participants.add(createGroupRequest.getCreatorId());
                 }
 
-                List<UserMetadata> userMetadatas = participants.stream().map(item -> {
-                    User user1 = UserRepository.getInstance().findById(item);
-
-                    return Mapper.userToUserMetadata(user1);
-                }).collect(Collectors.toList());
-
                 Dialog group = new Dialog(
                         UUID.randomUUID().toString(),
                         createGroupRequest.getGroupName(),
-                        userMetadatas,
+                        participants,
                         new ArrayList<>(),
                         createGroupRequest.getType(),
                         createGroupRequest.getCreatorId());
 
                 Dialog saved = DialogRepository.getInstance().save(group);
 
+                File bucketDir = new File("resource/buckets/" + saved.getId());
+
+                if (!bucketDir.exists()) {
+                    bucketDir.mkdirs();
+                }
+
                 RepositoryManager.exportDialogs();
 
                 sentPacket = new Packet(
-                        "localhost",
-                        30036,
+                        socket.getInetAddress().getHostAddress(),
+                        socket.getPort(),
                         new CreateGroupResponse(saved, "Tạo nhóm thành công.", "success"),
                         "CreateGroupResponse",
                         "dialogs/group/create");
@@ -532,12 +569,56 @@ class ClientHandler implements Runnable {
                         .collect(Collectors.toList());
 
                 sentPacket = new Packet(
-                        "localhost",
-                        30036,
+                        socket.getInetAddress().getHostAddress(),
+                        socket.getPort(),
                         new SearchUserResponse(searchUserRequest.getRequesterId(), userMetadatas1,
                                 "Searched users successfull.", "success"),
                         "SearchUserResponse",
                         packet.getCommand());
+
+                break;
+            case "users/update-info":
+                User updatedUser = objectMapper.convertValue(packet.getData(), User.class);
+                User oldUser = UserRepository.getInstance().findById(updatedUser.getId());
+
+                if (oldUser == null) {
+                    sentPacket = new Packet(
+                            socket.getInetAddress().getHostAddress(),
+                            socket.getPort(),
+                            new UserUpdateResponse(null, null, "Invalid user.", "failed"),
+                            "UserUpdateResponse",
+                            "users/update-info");
+
+                    return;
+                }
+
+                UserMetadata newUserMetadata = Mapper.userToUserMetadata(updatedUser);
+                UserMetadata oldUserMetadata = Mapper.userToUserMetadata(oldUser);
+
+                sentPacket = new Packet(
+                        socket.getInetAddress().getHostAddress(),
+                        socket.getPort(),
+                        new UserUpdateResponse(null, newUserMetadata, "User metadata updated.", "success"),
+                        "UserUpdateResponse",
+                        "users/fetch-update");
+
+                if (!(newUserMetadata.getName().equals(oldUserMetadata.getName())
+                        && newUserMetadata.getEmail().equals(oldUserMetadata.getEmail())
+                        && newUserMetadata.getDob().isEqual(oldUserMetadata.getDob())
+                        && newUserMetadata.getGender().equals(oldUserMetadata.getGender()))) {
+                    TCPServer.broadcast(sentPacket, updatedUser.getId());
+                }
+
+                UserRepository.getInstance().save(updatedUser);
+
+                sentPacket = new Packet(
+                        socket.getInetAddress().getHostAddress(),
+                        socket.getPort(),
+                        new UserUpdateResponse(updatedUser, newUserMetadata, "User updated.", "success"),
+                        "UserUpdateResponse",
+                        "users/update-info");
+
+                RepositoryManager.exportUsers();
 
                 break;
             default:
@@ -562,67 +643,9 @@ class ClientHandler implements Runnable {
     private void close() {
         try {
             socket.close();
+            System.out.println("Client with port: " + socket.getPort() + " has disconnected.");
         } catch (IOException ex) {
             System.out.println("Failed to close the client connection.");
         }
-    }
-}
-
-class Packet {
-    private String ipAddress;
-    private int port;
-    private Object data;
-    private String type;
-    private String command;
-
-    public Packet() {
-    }
-
-    public Packet(String ipAddress, int port, Object data, String type, String command) {
-        this.ipAddress = ipAddress;
-        this.port = port;
-        this.data = data;
-        this.type = type;
-        this.command = command;
-    }
-
-    public String getIpAddress() {
-        return this.ipAddress;
-    }
-
-    public void setIpAddress(String ipAddress) {
-        this.ipAddress = ipAddress;
-    }
-
-    public int getPort() {
-        return this.port;
-    }
-
-    public void setPort(int port) {
-        this.port = port;
-    }
-
-    public Object getData() {
-        return this.data;
-    }
-
-    public void setData(Object data) {
-        this.data = data;
-    }
-
-    public String getType() {
-        return this.type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getCommand() {
-        return this.command;
-    }
-
-    public void setCommand(String command) {
-        this.command = command;
     }
 }

@@ -425,8 +425,8 @@ public class LoginForm implements AppContext {
                                 loginForm.setEnabled(true);
                                 JOptionPane.showMessageDialog(
                                         null,
-                                        "Server không phản hồi!",
                                         "Đăng nhập không thành công",
+                                        "Server không phản hồi!",
                                         JOptionPane.ERROR_MESSAGE);
                             });
                         }

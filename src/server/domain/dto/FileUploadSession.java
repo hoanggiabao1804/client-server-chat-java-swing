@@ -9,6 +9,16 @@ public class FileUploadSession {
     private long receivedBytes;
 
     public FileUploadSession(File file) throws IOException {
+        File parent = file.getParentFile();
+
+        if (parent != null && !parent.exists()) {
+            boolean created = parent.mkdirs();
+
+            if (!created && !parent.exists()) {
+                throw new IOException("Cannot create upload directory: " + parent.getPath());
+            }
+        }
+
         this.outputStream = new FileOutputStream(file, false);
         this.receivedBytes = 0L;
     }

@@ -97,8 +97,8 @@ public class RepositoryManager {
 
 		Dialog dialog1 = new Dialog(
 				UUID.randomUUID().toString(),
-				"admin",
-				List.of(user1Metadata),
+				"",
+				List.of(user1Metadata.getId()),
 				new ArrayList<>(),
 				"private",
 				user1.getId());
@@ -159,7 +159,7 @@ public class RepositoryManager {
 		Dialog dialog2 = new Dialog(
 				UUID.randomUUID().toString(),
 				"",
-				List.of(user1Metadata, user2Metadata),
+				List.of(user1Metadata.getId(), user2Metadata.getId()),
 				new ArrayList<>(),
 				"direct",
 				user1.getId());
@@ -235,16 +235,16 @@ public class RepositoryManager {
 
 		Dialog dialog3 = new Dialog(
 				UUID.randomUUID().toString(),
-				"Hoàng Bảo",
-				List.of(user2Metadata),
+				"",
+				List.of(user2Metadata.getId()),
 				new ArrayList<>(),
 				"private",
 				user2.getId());
 
 		Dialog dialog4 = new Dialog(
 				UUID.randomUUID().toString(),
-				"Nguyễn Văn An",
-				List.of(user3Metadata),
+				"",
+				List.of(user3Metadata.getId()),
 				new ArrayList<>(),
 				"private",
 				user3.getId());

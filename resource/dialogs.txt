@@ -1,55 +1,25 @@
 [ {
-  "id" : "d7d1d15d-9fbc-4bdd-8297-f7835f0c45f2",
+  "id" : "6230fd00-70cb-4fe9-b798-5f88135ff571",
   "name" : "",
-  "participants" : [ {
-    "id" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97",
-    "name" : "admin",
-    "email" : "admin@example.com",
-    "dob" : "2000-01-01",
-    "gender" : "MALE"
-  }, {
-    "id" : "0164abaa-811f-4055-8955-f3cf3e1938db",
-    "name" : "Hoàng Bảo",
-    "email" : "bao123@gmail.com",
-    "dob" : "2005-01-02",
-    "gender" : "MALE"
-  } ],
+  "participants" : [ "e932ebdf-bd82-4330-84f8-1bae70967191" ],
+  "type" : "private",
+  "ownerId" : "e932ebdf-bd82-4330-84f8-1bae70967191"
+}, {
+  "id" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "name" : "",
+  "participants" : [ "e932ebdf-bd82-4330-84f8-1bae70967191", "c6bb185b-b1fb-48f5-8042-32781d5f586f" ],
   "type" : "direct",
-  "ownerId" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97"
+  "ownerId" : "e932ebdf-bd82-4330-84f8-1bae70967191"
 }, {
-  "id" : "7e60c051-8317-4352-a043-a2929ab6b634",
-  "name" : "Nguyễn Văn An",
-  "participants" : [ {
-    "id" : "c357dfde-3929-46a6-a2d0-6ec6fdc6696e",
-    "name" : "Nguyễn Văn An",
-    "email" : "an123@gmail.com",
-    "dob" : "2005-05-04",
-    "gender" : "MALE"
-  } ],
+  "id" : "9e0d2d32-64ab-46ea-9505-f85b67546341",
+  "name" : "",
+  "participants" : [ "95c267d9-f54d-4922-85fe-bf39205df0b0" ],
   "type" : "private",
-  "ownerId" : "c357dfde-3929-46a6-a2d0-6ec6fdc6696e"
+  "ownerId" : "95c267d9-f54d-4922-85fe-bf39205df0b0"
 }, {
-  "id" : "1231d1ee-5391-49a4-8417-98b4dc3b842f",
-  "name" : "Hoàng Bảo",
-  "participants" : [ {
-    "id" : "0164abaa-811f-4055-8955-f3cf3e1938db",
-    "name" : "Hoàng Bảo",
-    "email" : "bao123@gmail.com",
-    "dob" : "2005-01-02",
-    "gender" : "MALE"
-  } ],
+  "id" : "79c07388-623b-4980-ad09-203ab4d7feaa",
+  "name" : "",
+  "participants" : [ "c6bb185b-b1fb-48f5-8042-32781d5f586f" ],
   "type" : "private",
-  "ownerId" : "0164abaa-811f-4055-8955-f3cf3e1938db"
-}, {
-  "id" : "11a56b00-cdef-4725-b288-e56d3e959117",
-  "name" : "admin",
-  "participants" : [ {
-    "id" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97",
-    "name" : "admin",
-    "email" : "admin@example.com",
-    "dob" : "2000-01-01",
-    "gender" : "MALE"
-  } ],
-  "type" : "private",
-  "ownerId" : "384fe89f-c0c7-46c4-8af7-a67cd742aa97"
+  "ownerId" : "c6bb185b-b1fb-48f5-8042-32781d5f586f"
 } ]

@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 public class Dialog {
     private String id;
     private String name;
-    private List<UserMetadata> participants;
+    private List<String> participants;
     private String type;
     private String ownerId;
 
@@ -17,7 +17,7 @@ public class Dialog {
     public Dialog() {
     }
 
-    public Dialog(String id, String name, List<UserMetadata> participants, List<Message> messages, String type,
+    public Dialog(String id, String name, List<String> participants, List<Message> messages, String type,
             String ownerId) {
         this.id = id;
         this.name = name;
@@ -43,11 +43,11 @@ public class Dialog {
         this.name = name;
     }
 
-    public List<UserMetadata> getParticipants() {
+    public List<String> getParticipants() {
         return participants;
     }
 
-    public void setParticipants(List<UserMetadata> participants) {
+    public void setParticipants(List<String> participants) {
         this.participants = participants;
     }
 

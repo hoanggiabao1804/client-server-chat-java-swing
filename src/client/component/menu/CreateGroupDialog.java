@@ -339,10 +339,15 @@ public class CreateGroupDialog {
 				if (userList.contains(userMetadata)) {
 					userList.remove(userMetadata);
 					checkBox.setSelected(false);
+
 				} else {
 					userList.add(userMetadata);
 					checkBox.setSelected(true);
 				}
+
+				String selectedNamesString = String.join(",",
+						userList.stream().map(item -> item.getName()).collect(Collectors.toList()));
+				participantsTextField.setText(selectedNamesString);
 			}
 		});
 
@@ -357,6 +362,10 @@ public class CreateGroupDialog {
 			} else {
 				this.userList.add(userMetadata);
 			}
+
+			String selectedNamesString = String.join(",",
+					userList.stream().map(item -> item.getName()).collect(Collectors.toList()));
+			participantsTextField.setText(selectedNamesString);
 		});
 
 		contentPanel.setLayout(new BorderLayout());

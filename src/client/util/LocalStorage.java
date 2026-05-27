@@ -93,8 +93,8 @@ public class LocalStorage {
     public synchronized static Dialog findDirectDialog(String userA, String userB) {
         return userDialogs.stream().filter(item -> "direct".equals(item.getType()))
                 .filter(item -> item.getParticipants().size() == 2)
-                .filter(item -> item.getParticipants().stream().anyMatch(part -> part.getId().equals(userA)))
-                .filter(item -> item.getParticipants().stream().anyMatch(part -> part.getId().equals(userB)))
+                .filter(item -> item.getParticipants().stream().anyMatch(part -> part.equals(userA)))
+                .filter(item -> item.getParticipants().stream().anyMatch(part -> part.equals(userB)))
                 .findFirst().orElse(null);
     }
 }

@@ -75,6 +75,7 @@ public class UserDialog implements AppContext {
     // Font & Color
     private Font headerFont;
     private Font textFont;
+    private Color messageColor;
 
     // Containers section
     private JPanel rootContainer;
@@ -91,7 +92,7 @@ public class UserDialog implements AppContext {
     // Body section
     private JScrollPane bodyScrollPane;
     private List<JPanel> messageBubbleList;
-    private JPanel selectedMessageBubble;
+    // private JPanel selectedMessageBubble;
 
     // Footer section
     private JButton fileUploadButton;
@@ -116,6 +117,7 @@ public class UserDialog implements AppContext {
         // Font & Color
         this.headerFont = new Font("Consolas", Font.BOLD, 20);
         this.textFont = new Font("Consolas", Font.PLAIN, 15);
+        this.messageColor = new Color(53, 155, 164);
 
         // Containers initialization
         rootContainer = new JPanel();
@@ -133,7 +135,7 @@ public class UserDialog implements AppContext {
         bodyScrollPane = new JScrollPane(bodyContainer);
 
         messageBubbleList = null;
-        selectedMessageBubble = null;
+        // selectedMessageBubble = null;
 
         // Footer initialization
         fileUploadButton = new JButton();
@@ -162,8 +164,8 @@ public class UserDialog implements AppContext {
         headerContainer.add(headerUserInfoContainer);
 
         headerUserInfoContainer.setLayout(new FlowLayout(FlowLayout.LEFT));
-        headerUserInfoContainer.setPreferredSize(new Dimension(500, 60));
-        headerUserInfoContainer.setBackground(Color.white);
+        headerUserInfoContainer.setPreferredSize(new Dimension(300, 60));
+        headerUserInfoContainer.setBackground(Color.orange);
         headerUserInfoContainer.add(userAvatar);
         headerUserInfoContainer.add(usernameLabel);
 
@@ -298,8 +300,8 @@ public class UserDialog implements AppContext {
                             SwingUtilities.invokeLater(() -> {
                                 JOptionPane.showMessageDialog(
                                         null,
-                                        "Server không phản hồi!",
                                         "Gửi tin nhắn không thành công",
+                                        "Server không phản hồi!",
                                         JOptionPane.ERROR_MESSAGE);
                             });
                         }
@@ -360,8 +362,8 @@ public class UserDialog implements AppContext {
                         SwingUtilities.invokeLater(() -> {
                             JOptionPane.showMessageDialog(
                                     null,
-                                    "Server không phản hồi!",
                                     "Gửi tin nhắn không thành công",
+                                    "Server không phản hồi!",
                                     JOptionPane.ERROR_MESSAGE);
                         });
                     }
@@ -385,7 +387,8 @@ public class UserDialog implements AppContext {
         JComponent item = null;
 
         if (message instanceof TextMessage) {
-            item = new MessageItem(message.getContent(), new Color(0, 120, 255));
+            // new Color(0, 120, 255)
+            item = new MessageItem(message.getContent(), messageColor);
         } else if (message instanceof FileMessage) {
             FileMessage fileMessage = (FileMessage) message;
             ImageIcon fileIcon = new ImageIcon("assets/file.png");
@@ -430,6 +433,8 @@ public class UserDialog implements AppContext {
 
         JPanel actionPanel = createMessageActionPanel(wrapper, item, message, isMine);
 
+        setActionButtonsVisible(actionPanel, false);
+
         actionPanel.setAlignmentY(Component.CENTER_ALIGNMENT);
         item.setAlignmentY(Component.CENTER_ALIGNMENT);
 
@@ -447,6 +452,14 @@ public class UserDialog implements AppContext {
 
             wrapper.add(rowPanel, BorderLayout.EAST);
         } else {
+            JComponent avatar = createSenderAvatar(message);
+
+            avatar.setAlignmentY(Component.BOTTOM_ALIGNMENT);
+            item.setAlignmentY(Component.BOTTOM_ALIGNMENT);
+            actionPanel.setAlignmentY(Component.CENTER_ALIGNMENT);
+
+            rowPanel.add(avatar);
+            rowPanel.add(Box.createHorizontalStrut(6));
             rowPanel.add(item);
             rowPanel.add(Box.createHorizontalStrut(6));
             rowPanel.add(actionPanel);
@@ -457,7 +470,7 @@ public class UserDialog implements AppContext {
         MouseAdapter hoverAdapter = new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                actionPanel.setVisible(true);
+                setActionButtonsVisible(actionPanel, true);
                 wrapper.revalidate();
                 wrapper.repaint();
             }
@@ -470,7 +483,7 @@ public class UserDialog implements AppContext {
                         wrapper);
 
                 if (!wrapper.contains(p)) {
-                    actionPanel.setVisible(false);
+                    setActionButtonsVisible(actionPanel, false);
                     wrapper.revalidate();
                     wrapper.repaint();
                 }
@@ -478,16 +491,18 @@ public class UserDialog implements AppContext {
         };
 
         wrapper.addMouseListener(hoverAdapter);
-        item.addMouseListener(hoverAdapter);
+        rowPanel.addMouseListener(hoverAdapter);
         actionPanel.addMouseListener(hoverAdapter);
+
+        Dimension rowSize = rowPanel.getPreferredSize();
 
         wrapper.setMaximumSize(new Dimension(
                 Integer.MAX_VALUE,
-                itemSize.height + 10));
+                rowSize.height + 10));
 
         wrapper.setPreferredSize(new Dimension(
                 bodyContainer.getPreferredSize().width,
-                itemSize.height + 10));
+                rowSize.height + 10));
 
         return wrapper;
     }
@@ -496,7 +511,9 @@ public class UserDialog implements AppContext {
             boolean isMine) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 0));
         panel.setOpaque(false);
-        panel.setVisible(false);
+        panel.setPreferredSize(new Dimension(60, 32));
+        panel.setMinimumSize(new Dimension(60, 32));
+        panel.setMaximumSize(new Dimension(60, 32));
 
         JButton deleteButton = new JButton();
         ImageIcon deleteIcon = new ImageIcon("assets/trash.png");
@@ -540,8 +557,8 @@ public class UserDialog implements AppContext {
                             SwingUtilities.invokeLater(() -> {
                                 JOptionPane.showMessageDialog(
                                         null,
-                                        "Server không phản hồi!",
                                         "Gửi tin nhắn không thành công",
+                                        "Server không phản hồi!",
                                         JOptionPane.ERROR_MESSAGE);
                             });
                         }
@@ -555,65 +572,59 @@ public class UserDialog implements AppContext {
             // Delete in database;
         });
 
-        MessageItem messageItem = new MessageItem("Đã ẩn tin nhắn", Color.lightGray);
+        MessageItem hiddenMessageItem = new MessageItem("Đã ẩn tin nhắn", Color.lightGray);
         hideButton.setIcon(hideIcon);
         hideButton.setToolTipText("Ẩn tin nhắn");
         hideButton.addActionListener(l -> {
+            JPanel rowPanel = (JPanel) wrapper.getComponent(0);
+
+            final int messageItemIndex = 2;
+
             if (hideButton.getIcon() == hideIcon) {
                 hideButton.setIcon(showIcon);
                 hideButton.setToolTipText("Hiện tin nhắn");
 
-                messageItem.setAlignmentY(Component.CENTER_ALIGNMENT);
-                messageItem.setToolTipText(originMessage.getTimestamp().format(dateTimeFormatter));
-                messageItem.addMouseListener(originMessageItem.getMouseListeners()[0]);
-                Dimension itemSize = messageItem.getPreferredSize();
-                wrapper.setMaximumSize(new Dimension(
-                        Integer.MAX_VALUE,
-                        itemSize.height + 10));
+                hiddenMessageItem.setAlignmentY(
+                        isMine
+                                ? Component.CENTER_ALIGNMENT
+                                : Component.BOTTOM_ALIGNMENT);
 
-                wrapper.setPreferredSize(new Dimension(
-                        bodyContainer.getPreferredSize().width,
-                        itemSize.height + 10));
+                hiddenMessageItem.setToolTipText(
+                        originMessage.getTimestamp().format(dateTimeFormatter));
 
-                JPanel rowPanel = (JPanel) wrapper.getComponent(0);
-                rowPanel.remove(isMine ? 2 : 0);
-                rowPanel.add(messageItem, isMine ? 2 : 0);
+                // // Gắn hover listener giống message cũ
+                // for (MouseAdapter adapter : new MouseAdapter[] {}) {
+                // // không cần đoạn này nếu bạn gắn listener vào wrapper + actionPanel
+                // }
 
-                rowPanel.revalidate();
-                rowPanel.repaint();
+                rowPanel.remove(messageItemIndex);
+                rowPanel.add(hiddenMessageItem, messageItemIndex);
 
-                wrapper.revalidate();
-                wrapper.repaint();
-
-                bodyContainer.revalidate();
-                bodyContainer.repaint();
+                updateWrapperHeight(wrapper, rowPanel);
 
             } else {
                 hideButton.setIcon(hideIcon);
                 hideButton.setToolTipText("Ẩn tin nhắn");
 
-                Dimension itemSize = originMessageItem.getPreferredSize();
-                wrapper.setMaximumSize(new Dimension(
-                        Integer.MAX_VALUE,
-                        itemSize.height + 10));
+                originMessageItem.setAlignmentY(
+                        isMine
+                                ? Component.CENTER_ALIGNMENT
+                                : Component.BOTTOM_ALIGNMENT);
 
-                wrapper.setPreferredSize(new Dimension(
-                        bodyContainer.getPreferredSize().width,
-                        itemSize.height + 10));
+                rowPanel.remove(messageItemIndex);
+                rowPanel.add(originMessageItem, messageItemIndex);
 
-                JPanel rowPanel = (JPanel) wrapper.getComponent(0);
-                rowPanel.remove(isMine ? 2 : 0);
-                rowPanel.add(originMessageItem, isMine ? 2 : 0);
-
-                rowPanel.revalidate();
-                rowPanel.repaint();
-
-                wrapper.revalidate();
-                wrapper.repaint();
-
-                bodyContainer.revalidate();
-                bodyContainer.repaint();
+                updateWrapperHeight(wrapper, rowPanel);
             }
+
+            rowPanel.revalidate();
+            rowPanel.repaint();
+
+            wrapper.revalidate();
+            wrapper.repaint();
+
+            bodyContainer.revalidate();
+            bodyContainer.repaint();
         });
         hideButton.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
@@ -641,10 +652,55 @@ public class UserDialog implements AppContext {
         }
         panel.add(hideButton);
 
-        panel.setPreferredSize(new Dimension(60, 32));
-        panel.setMaximumSize(new Dimension(60, 32));
-
         return panel;
+    }
+
+    private JComponent createSenderAvatar(Message message) {
+        RoundButton avatar = new RoundButton();
+
+        avatar.setPreferredSize(new Dimension(32, 32));
+        avatar.setMinimumSize(new Dimension(32, 32));
+        avatar.setMaximumSize(new Dimension(32, 32));
+        avatar.setFocusable(false);
+
+        ImageIcon avatarIcon = new ImageIcon("assets/user-round.png");
+        avatar.setIcon(avatarIcon);
+
+        String senderName = getSenderDisplayName(message.getSenderId());
+        avatar.setToolTipText(senderName);
+
+        return avatar;
+    }
+
+    private void setActionButtonsVisible(JPanel actionPanel, boolean visible) {
+        for (Component c : actionPanel.getComponents()) {
+            c.setVisible(visible);
+        }
+
+        actionPanel.revalidate();
+        actionPanel.repaint();
+    }
+
+    private String getSenderDisplayName(String senderId) {
+        UserMetadata user = LocalStorage.getUserById(senderId);
+
+        if (user != null) {
+            return user.getName();
+        }
+
+        return senderId;
+    }
+
+    private void updateWrapperHeight(JPanel wrapper, JPanel rowPanel) {
+        Dimension rowSize = rowPanel.getPreferredSize();
+
+        wrapper.setMaximumSize(new Dimension(
+                Integer.MAX_VALUE,
+                rowSize.height + 10));
+
+        wrapper.setPreferredSize(new Dimension(
+                bodyContainer.getPreferredSize().width,
+                rowSize.height + 10));
     }
 
     public void loadUser() {
@@ -678,8 +734,8 @@ public class UserDialog implements AppContext {
                         SwingUtilities.invokeLater(() -> {
                             JOptionPane.showMessageDialog(
                                     null,
+                                    "Tải dữ liệu hội thoại không thành công.",
                                     "Server không phản hồi!",
-                                    "Đăng nhập không thành công",
                                     JOptionPane.ERROR_MESSAGE);
                         });
                     }
@@ -695,12 +751,14 @@ public class UserDialog implements AppContext {
 
             String dialogName = dialog.getName();
             if (dialog.getType().equals("direct")) {
-                for (UserMetadata userMetadata : dialog.getParticipants()) {
-                    if (!userMetadata.getId().equals(userLogin.getId())) {
-                        dialogName = userMetadata.getName();
+                for (String userId : dialog.getParticipants()) {
+                    if (!userId.equals(userLogin.getId())) {
+                        dialogName = LocalStorage.getUserById(userId).getName();
                         break;
                     }
                 }
+            } else if (dialog.getType().equals("private")) {
+                dialogName = LocalStorage.getUserById(dialog.getParticipants().get(0)).getName();
             }
 
             usernameLabel.setText(dialogName);
@@ -728,12 +786,14 @@ public class UserDialog implements AppContext {
 
             String dialogName = dialog.getName();
             if (dialog.getType().equals("direct")) {
-                for (UserMetadata userMetadata : dialog.getParticipants()) {
-                    if (!userMetadata.getId().equals(userLogin.getId())) {
-                        dialogName = userMetadata.getName();
+                for (String userId : dialog.getParticipants()) {
+                    if (!userId.equals(userLogin.getId())) {
+                        dialogName = LocalStorage.getUserById(userId).getName();
                         break;
                     }
                 }
+            } else if (dialog.getType().equals("private")) {
+                dialogName = LocalStorage.getUserById(dialog.getParticipants().get(0)).getName();
             }
 
             usernameLabel.setText(dialogName);

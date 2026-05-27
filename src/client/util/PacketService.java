@@ -175,4 +175,15 @@ public class PacketService {
 
         TCPClient.enqueuPacket(packet);
     }
+
+    public static synchronized void updateUserInformation(User user) {
+        Packet packet = new Packet(
+                socket.getInetAddress().getHostAddress(),
+                socket.getPort(),
+                user,
+                "User",
+                "users/update-info");
+
+        TCPClient.enqueuPacket(packet);
+    }
 }

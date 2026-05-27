@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import domain.Dialog;
 import domain.Message;
-import domain.UserMetadata;
 import util.ObjectMapperFactory;
 
 public class DialogRepository implements Repository {
@@ -49,8 +48,8 @@ public class DialogRepository implements Repository {
 
             // Index dialogs by user ID
             for (Dialog dialog : dialogs) {
-                for (UserMetadata userMetadata : dialog.getParticipants()) {
-                    userIdIndexedStorage.computeIfAbsent(userMetadata.getId(), k -> new ArrayList<>()).add(dialog);
+                for (String userId : dialog.getParticipants()) {
+                    userIdIndexedStorage.computeIfAbsent(userId, k -> new ArrayList<>()).add(dialog);
                 }
             }
 
@@ -113,8 +112,8 @@ public class DialogRepository implements Repository {
         }
 
         storage.put(id, dialog);
-        for (UserMetadata userMetadata : dialog.getParticipants()) {
-            userIdIndexedStorage.computeIfAbsent(userMetadata.getId(), k -> new ArrayList<>()).add(dialog);
+        for (String userId : dialog.getParticipants()) {
+            userIdIndexedStorage.computeIfAbsent(userId, k -> new ArrayList<>()).add(dialog);
         }
 
         return dialog;
@@ -125,8 +124,8 @@ public class DialogRepository implements Repository {
             Dialog dialogToRemove = storage.get(id);
             storage.remove(id, dialogToRemove);
 
-            for (UserMetadata userMetadata : dialogToRemove.getParticipants()) {
-                userIdIndexedStorage.computeIfPresent(userMetadata.getId(), (k, v) -> {
+            for (String userId : dialogToRemove.getParticipants()) {
+                userIdIndexedStorage.computeIfPresent(userId, (k, v) -> {
                     v.remove(dialogToRemove);
                     return v;
                 });
@@ -137,8 +136,8 @@ public class DialogRepository implements Repository {
     public Dialog findDirectDialog(String userA, String userB) {
         return storage.values().stream().filter(item -> "direct".equals(item.getType()))
                 .filter(item -> item.getParticipants().size() == 2)
-                .filter(item -> item.getParticipants().stream().anyMatch(part -> part.getId().equals(userA)))
-                .filter(item -> item.getParticipants().stream().anyMatch(part -> part.getId().equals(userB)))
+                .filter(item -> item.getParticipants().stream().anyMatch(part -> part.equals(userA)))
+                .filter(item -> item.getParticipants().stream().anyMatch(part -> part.equals(userB)))
                 .findFirst().orElse(null);
     }
 }

@@ -3,6 +3,7 @@ package main;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -33,10 +34,12 @@ import domain.dto.FileDownloadAck;
 import domain.dto.FileDownloadResponse;
 import domain.dto.FileDownloadSessionClient;
 import domain.dto.FileTransferResponse;
+import domain.dto.NetworkConfig;
 import domain.dto.RegisterResponse;
 import domain.dto.SearchUserResponse;
 import domain.dto.SendMessageResponse;
 import domain.dto.UserDialogResponse;
+import domain.dto.UserUpdateResponse;
 import util.LocalStorage;
 import util.ObjectMapperFactory;
 import util.PacketService;
@@ -45,11 +48,12 @@ public class TCPClient {
 	private static final ObjectMapper objectMapper = ObjectMapperFactory.create();
 	private static final BlockingQueue<Packet> sendQueue = new LinkedBlockingQueue<>();
 	private static final Map<String, FileDownloadSessionClient> downloadSessions = new ConcurrentHashMap<>();
+	private static final NetworkConfig networkConfig = loadConfig();
 
 	public static void main(String arg[]) {
 		objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
 
-		try (Socket socket = new Socket("localhost", 30036)) {
+		try (Socket socket = new Socket(networkConfig.getIpAddress(), networkConfig.getPort())) {
 			PacketService.setSocket(socket);
 			BufferedReader reader = new BufferedReader(
 					new InputStreamReader(socket.getInputStream()));
@@ -128,6 +132,24 @@ public class TCPClient {
 			}
 			downloadSessions.clear();
 		}
+	}
+
+	private static NetworkConfig loadConfig() {
+		try {
+			File file = new File("client-config/config.json");
+
+			NetworkConfig config = objectMapper.readValue(file, NetworkConfig.class);
+
+			return config;
+		} catch (FileNotFoundException ex) {
+			System.out.println(">>> ERROR: File name server-config/config.json not found.");
+			ex.printStackTrace();
+		} catch (Exception ex) {
+			System.out.println(">>> ERROR: Failed to load server config.");
+			ex.printStackTrace();
+		}
+
+		return new NetworkConfig("localhost", 30036);
 	}
 
 	public static void handleServerPacket(Packet packet) {
@@ -350,6 +372,27 @@ public class TCPClient {
 				if (fetchNewUserResponse.getStatus().equals("success")) {
 					LocalStorage.addUser(fetchNewUserResponse.getUser());
 				}
+				break;
+
+			case "users/update-info":
+				UserUpdateResponse userUpdateResponse = objectMapper.convertValue(packet.getData(),
+						UserUpdateResponse.class);
+
+				if (userUpdateResponse.getStatus().equals("success")) {
+					LocalStorage.setUserLogin(userUpdateResponse.getUser());
+					LocalStorage.addUser(userUpdateResponse.getUserMetadata());
+				}
+
+				break;
+
+			case "users/fetch-update":
+				UserUpdateResponse userUpdateResponse1 = objectMapper.convertValue(packet.getData(),
+						UserUpdateResponse.class);
+
+				if (userUpdateResponse1.getStatus().equals("success")) {
+					LocalStorage.addUser(userUpdateResponse1.getUserMetadata());
+				}
+
 				break;
 			default:
 				System.out.println("?");

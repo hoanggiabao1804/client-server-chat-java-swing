@@ -1,0 +1,59 @@
+[ {
+  "id" : "04cadcdd-215a-4c8b-8f65-65cd41e7623e",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "Hello, how are you?",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : "c6bb185b-b1fb-48f5-8042-32781d5f586f",
+  "timestamp" : "2026-05-15T12:31:12",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "8283064a-215d-40da-9119-2ade07c25ef2",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "Im fine, thank you! This is a text message.",
+  "senderId" : "c6bb185b-b1fb-48f5-8042-32781d5f586f",
+  "receiverId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "timestamp" : "2026-05-15T12:35:54",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "99fd3cba-31ac-491c-a5ef-0649c5386f46",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "Uia, uia, uia.",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : "c6bb185b-b1fb-48f5-8042-32781d5f586f",
+  "timestamp" : "2026-05-15T16:42:22",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "f0c530b4-aa26-4be5-9aa3-f6e79e00282b",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "fileName" : "file.txt",
+  "fileSize" : 34,
+  "senderId" : "c6bb185b-b1fb-48f5-8042-32781d5f586f",
+  "receiverId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "filePath" : "resource/buckets/1370b4a9-9bc3-40b9-9906-5eadcd526180/f0c530b4-aa26-4be5-9aa3-f6e79e00282b-file.txt",
+  "timestamp" : "2026-05-15T17:12:45",
+  "tag" : "sent",
+  "type" : "file"
+}, {
+  "id" : "fc7b13dd-c18f-4029-8725-a39c0fe01b75",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : "c6bb185b-b1fb-48f5-8042-32781d5f586f",
+  "timestamp" : "2026-05-15T23:19:10",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "eb459134-457d-46c4-b58a-2ed81f7dbbab",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "fileName" : "helloworld.txt",
+  "fileSize" : 13,
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : "c6bb185b-b1fb-48f5-8042-32781d5f586f",
+  "filePath" : "resource/buckets/1370b4a9-9bc3-40b9-9906-5eadcd526180/eb459134-457d-46c4-b58a-2ed81f7dbbab-helloworld.txt",
+  "timestamp" : "2026-05-15T17:12:45",
+  "tag" : "sent",
+  "type" : "file"
+} ]

@@ -667,8 +667,8 @@ public class RegisterForm implements AppContext {
                                 registerForm.setEnabled(true);
                                 JOptionPane.showMessageDialog(
                                         null,
-                                        "Server không phản hồi!",
                                         "Đăng ký không thành công",
+                                        "Server không phản hồi!",
                                         JOptionPane.ERROR_MESSAGE);
                             });
                         }

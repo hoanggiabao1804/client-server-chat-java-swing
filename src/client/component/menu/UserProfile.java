@@ -16,6 +16,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
@@ -26,6 +28,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -36,8 +39,10 @@ import component.PopupWindow;
 import component.picker.DatePicker;
 import constant.GenderEnum;
 import domain.User;
+import domain.dto.UserUpdateResponse;
 import util.FieldValidator;
 import util.LocalStorage;
+import util.PacketService;
 
 public class UserProfile implements AppContext {
     private final Container parent;
@@ -138,6 +143,8 @@ public class UserProfile implements AppContext {
     private Dimension windowSize;
     private PopupWindow dobPickerPopupWindow;
     private DatePicker dobPicker;
+
+    private CountDownLatch countDownLatch;
 
     public UserProfile(Container parent) {
         this.parent = parent;
@@ -746,16 +753,55 @@ public class UserProfile implements AppContext {
         }
 
         if (!hasErrors) {
-            this.userLogin.setName(this.nameTextField.getText().strip());
-            this.userLogin.setPassword(password);
-            this.userLogin.setEmail(this.emailTextField.getText().strip());
-            this.userLogin.setDob(this.selectedDob);
-            this.userLogin.setGender(genderMap1.get(this.genderComboBox.getSelectedItem()));
+            User updatedUser = new User(
+                    userLogin.getId(),
+                    this.nameTextField.getText().strip(),
+                    this.userLogin.getUsername(),
+                    password,
+                    this.emailTextField.getText().strip(),
+                    this.selectedDob,
+                    genderMap1.get(this.genderComboBox.getSelectedItem()));
 
-            MainMenu mainMenu = (MainMenu) AppFrame.getInstance().getContextPools().getContext("mainMenu");
-            mainMenu.loadUser();
+            countDownLatch = new CountDownLatch(1);
+
+            PacketService.updateUserInformation(updatedUser);
+
+            new Thread(() -> {
+                try {
+                    boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
+
+                    if (!success) {
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(
+                                    null,
+                                    "Cập nhật thông tin người dùng không thành công",
+                                    "Server không phản hồi!",
+                                    JOptionPane.ERROR_MESSAGE);
+                        });
+                    }
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+
+            // MainMenu mainMenu = (MainMenu)
+            // AppFrame.getInstance().getContextPools().getContext("mainMenu");
+            // mainMenu.loadUser();
 
             this.changeEditingState(isEditable = false);
+        }
+    }
+
+    public synchronized void getResponse(UserUpdateResponse userUpdateResponse) {
+        countDownLatch.countDown();
+
+        if (userUpdateResponse.getStatus().equals("success")) {
+            System.out.println("Updated user's information successful.");
+        } else {
+            JOptionPane.showMessageDialog(null, userUpdateResponse.getMessage(),
+                    "Cập nhật thông tin người dùng thất bại",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
