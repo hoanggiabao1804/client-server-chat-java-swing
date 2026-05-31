@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -21,9 +22,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
+import javax.swing.SwingUtilities;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
+import component.ContentPage;
+import component.Menu;
 import domain.Dialog;
 import domain.FileMessage;
 import domain.Message;
@@ -61,27 +66,126 @@ import util.ObjectMapperFactory;
 public class TCPServer {
     private static final ObjectMapper objectMapper = ObjectMapperFactory.create();
     private static final Map<String, ClientHandler> onlineUsers = new ConcurrentHashMap<>();
+    private static final NetworkConfig networkConfig = loadConfig();
+    private static final Map<String, Thread> serverThreads = new ConcurrentHashMap<>();
+    private static boolean isOpen = true;
+
+    private static volatile ServerSocket serverSocket;
+    private static final ExecutorService clientPool = Executors.newCachedThreadPool();
 
     public static void main(String arg[]) {
         objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
 
         RepositoryManager.getInstance();
-        ExecutorService pool = Executors.newCachedThreadPool();
-        NetworkConfig networkConfig = loadConfig();
 
-        try (ServerSocket serverSocket = new ServerSocket(networkConfig.getPort())) {
-            do {
+        Thread uiThread = new Thread(() -> {
+            Menu menu = Menu.getInstance();
+            menu.run();
+        });
+
+        Thread processorThread = new Thread(TCPServer::listenForConnections);
+
+        serverThreads.put("uiThread", uiThread);
+        serverThreads.put("processorThread", processorThread);
+
+        uiThread.start();
+        processorThread.start();
+    }
+
+    private static void listenForConnections() {
+        try {
+            serverSocket = new ServerSocket(networkConfig.getPort());
+            System.out.println(">>> Server is listening on port: " + networkConfig.getPort());
+
+            while (!Thread.currentThread().isInterrupted() && !serverSocket.isClosed()) {
                 Socket socket = serverSocket.accept();
-
                 System.out.println("Talking to client with port: " + socket.getPort());
-
                 ClientHandler handler = new ClientHandler(socket);
-
-                pool.execute(handler);
-            } while (true);
-        } catch (Exception ex) {
-            System.out.println("Errors happened!");
+                clientPool.execute(handler);
+            }
+        } catch (SocketException ex) {
+            System.out.println(">>> Server listener loop stopped.");
             ex.printStackTrace();
+        } catch (Exception ex) {
+            System.out.println(">>> ERROR: Errors happened in listener!");
+            ex.printStackTrace();
+        }
+    }
+
+    public synchronized static void openNewConnection() {
+        Packet packet = new Packet(networkConfig.getIpAddress(), networkConfig.getPort(), networkConfig,
+                "NetworkConfig", "connection/migrate");
+        broadcast(packet, null);
+
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            try {
+                serverSocket.close();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        Thread oldProcessorThread = serverThreads.get("processorThread");
+        if (oldProcessorThread != null) {
+            oldProcessorThread.interrupt();
+        }
+
+        for (ClientHandler client : onlineUsers.values()) {
+            client.forceClose();
+        }
+        onlineUsers.clear();
+
+        Thread newThread = new Thread(TCPServer::listenForConnections);
+        serverThreads.put("processorThread", newThread);
+        newThread.start();
+
+        System.out.println(">>> Server migrated and restarted successfully.");
+    }
+
+    public synchronized static void updateNetWorkConfig(NetworkConfig networkConfig) {
+        TCPServer.networkConfig.setIpAddress(networkConfig.getIpAddress());
+        TCPServer.networkConfig.setPort(networkConfig.getPort());
+
+        try {
+            File file = new File("server-config/config.json");
+            objectMapper.writeValue(file, TCPServer.networkConfig);
+        } catch (IOException e) {
+            System.out.println(">>> ERROR: Failed to export client config.");
+            e.printStackTrace();
+        }
+    }
+
+    public synchronized static boolean isServerOpen() {
+        return isOpen;
+    }
+
+    public synchronized static void setOpen(boolean isOpen) {
+        TCPServer.isOpen = isOpen;
+
+        if (!isOpen) {
+            Packet packet = new Packet(networkConfig.getIpAddress(),
+                    networkConfig.getPort(),
+                    "Server đã đóng kết nối.",
+                    "String", "connection/close");
+
+            broadcast(packet, null);
+
+            for (ClientHandler client : onlineUsers.values()) {
+                client.forceClose();
+            }
+            onlineUsers.clear();
+
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                try {
+                    serverSocket.close();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        } else {
+            Thread newThread = new Thread(TCPServer::listenForConnections);
+            serverThreads.put("processorThread", newThread);
+            newThread.start();
         }
     }
 
@@ -95,6 +199,10 @@ public class TCPServer {
 
     public static ClientHandler getClientHandler(String userId) {
         return onlineUsers.getOrDefault(userId, null);
+    }
+
+    public static void removeClient(String userId) {
+        onlineUsers.remove(userId);
     }
 
     public static void broadcast(Packet packet, String senderId) {
@@ -126,6 +234,27 @@ public class TCPServer {
         });
     }
 
+    public static void unicast(Packet packet, String userId) {
+        ClientHandler client = onlineUsers.getOrDefault(userId, null);
+        if (client != null) {
+            try {
+                String message = objectMapper.writeValueAsString(packet);
+                client.send(message);
+            } catch (IOException ex) {
+                onlineUsers.remove(userId, client);
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    public static List<String> getOnlineUsers() {
+        return onlineUsers.keySet().stream().collect(Collectors.toList());
+    }
+
+    public static NetworkConfig getConfig() {
+        return networkConfig;
+    }
+
     private static NetworkConfig loadConfig() {
         try {
             File file = new File("server-config/config.json");
@@ -146,16 +275,16 @@ public class TCPServer {
 }
 
 class ClientHandler implements Runnable {
+    private String userId;
     private Socket socket;
     private BufferedReader reader;
     private BufferedWriter writer;
 
     private static final ObjectMapper objectMapper = ObjectMapperFactory.create();
     private final Map<String, FileUploadSession> uploadSessions = new ConcurrentHashMap<>();
-    // private final Map<String, FileDownloadSessionServer> downloadSessions = new
-    // ConcurrentHashMap<>();
 
     public ClientHandler(Socket socket) throws IOException {
+        this.userId = null;
         this.socket = socket;
         this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         this.writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -168,26 +297,17 @@ class ClientHandler implements Runnable {
             String line;
 
             while ((line = reader.readLine()) != null) {
-                System.out.println("Received: " + line);
+
                 Packet packet = objectMapper.readValue(line, Packet.class);
 
-                System.out.println("Packet type: " + packet.getType());
-
-                handlePacket(packet);
-            }
-        } catch (IOException ex) {
-            System.out.println("Client disconnected");
-        } finally {
-            close();
-            for (FileUploadSession session : uploadSessions.values()) {
-                try {
-                    session.close();
-                } catch (IOException ex) {
-                    System.out.println("Failed to close session");
-                    ex.printStackTrace();
+                if (TCPServer.isServerOpen()) {
+                    handlePacket(packet);
                 }
             }
-            uploadSessions.clear();
+        } catch (IOException ex) {
+            System.out.println(">>> ERROR: Client disconnected");
+        } finally {
+            close();
         }
     }
 
@@ -207,7 +327,6 @@ class ClientHandler implements Runnable {
                 }
 
                 if (!result.isEmpty()) {
-                    System.out.println("Authentication fail with error: " + result);
                     sentPacket = new Packet(
                             socket.getInetAddress().getHostAddress(),
                             socket.getPort(),
@@ -216,22 +335,47 @@ class ClientHandler implements Runnable {
                             "auth");
 
                 } else {
+                    this.userId = foundUser.getId();
+                    Menu menu = Menu.getInstance();
+                    ContentPage contentPage = (ContentPage) menu.getContext("contentPage");
+
+                    if (TCPServer.isOnline(foundUser.getId())) {
+                        Packet closePacket = new Packet(socket.getInetAddress().getHostAddress(),
+                                socket.getPort(),
+                                "Tài khoản đã được đăng nhập ở nơi khác.",
+                                "String", "connection/close");
+                        TCPServer.unicast(closePacket, foundUser.getId());
+
+                        ClientHandler clientToClose = TCPServer.getClientHandler(foundUser.getId());
+                        clientToClose.close();
+
+                        SwingUtilities.invokeLater(() -> {
+                            if (contentPage != null) {
+                                contentPage.removeClient(foundUser.getId());
+                            }
+                        });
+                    }
+
                     TCPServer.putToClientPool(foundUser.getId(), this);
-                    System.out.println("Successful to authenticate user.");
+                    SwingUtilities.invokeLater(() -> {
+                        if (contentPage != null) {
+                            contentPage.addClient(foundUser.getId());
+                        }
+                    });
+
                     sentPacket = new Packet(
                             socket.getInetAddress().getHostAddress(),
                             socket.getPort(),
-                            new AuthResponse(foundUser, "Authenticate successful.", "success"),
+                            new AuthResponse(foundUser, "Authenticate successfully.", "success"),
                             "AuthResponse",
                             "auth");
+
                 }
                 break;
             case "registry":
                 User user = objectMapper.convertValue(packet.getData(), User.class);
 
-                System.out.println("Registering user with username: " + user.getUsername());
                 if (UserRepository.getInstance().findByUsername(user.getUsername()) != null) {
-                    System.out.println("Registration fail with error: Username is already taken.");
                     sentPacket = new Packet(
                             socket.getInetAddress().getHostAddress(),
                             socket.getPort(),
@@ -252,7 +396,6 @@ class ClientHandler implements Runnable {
                     RepositoryManager.exportUsers();
                     RepositoryManager.exportDialogs();
 
-                    System.out.println("Successful to register user.");
                     sentPacket = new Packet(
                             socket.getInetAddress().getHostAddress(),
                             socket.getPort(),
@@ -278,7 +421,6 @@ class ClientHandler implements Runnable {
                 List<Dialog> userDialogs = DialogRepository.getInstance().findByUserId(userId);
 
                 if (userDialogs == null) {
-                    System.out.println("Fetch user dialogs failed!");
                     sentPacket = new Packet(
                             socket.getInetAddress().getHostAddress(),
                             socket.getPort(),
@@ -287,11 +429,10 @@ class ClientHandler implements Runnable {
                             "UserDialogResponse",
                             "dialogs/get");
                 } else {
-                    System.out.println("UserDialogs size: " + userDialogs.size());
                     sentPacket = new Packet(
                             socket.getInetAddress().getHostAddress(),
                             socket.getPort(),
-                            new UserDialogResponse(userDialogs, "Fetch user '" + userId + "' dialogs successful.",
+                            new UserDialogResponse(userDialogs, "Fetch user '" + userId + "' dialogs successfully.",
                                     "success"),
                             "UserDialogResponse",
                             "dialogs/get");
@@ -302,12 +443,12 @@ class ClientHandler implements Runnable {
                 String dialogId = (String) packet.getData();
 
                 List<Message> messages = MessageRepository.getInstance().findByDialogId(dialogId);
-                System.out.println("Dialog messages size: " + messages.size());
+
                 sentPacket = new Packet(
                         socket.getInetAddress().getHostAddress(),
                         socket.getPort(),
                         new DialogContentResponse(dialogId, messages,
-                                "Fetch message list for dialog '" + dialogId + "' successful.", "success"),
+                                "Fetch message list for dialog '" + dialogId + "' successfully.", "success"),
                         "DialogContentResponse", "dialogs/id");
                 break;
             case "dialogs/send":
@@ -323,13 +464,11 @@ class ClientHandler implements Runnable {
 
                 Message messagePersisted = MessageRepository.getInstance().save(message);
 
-                System.out.println("Message content: " + messagePersisted.getContent());
-
                 sentPacket = new Packet(
                         socket.getInetAddress().getHostAddress(),
                         socket.getPort(),
                         new SendMessageResponse(messagePersisted.getDialogId(), messagePersisted,
-                                "Message is sent successful.", "success"),
+                                "Message is sent successfully.", "success"),
                         "SendMessageResponse",
                         "dialogs/send");
 
@@ -377,7 +516,7 @@ class ClientHandler implements Runnable {
                         socket.getInetAddress().getHostAddress(),
                         socket.getPort(),
                         new DeleteMessageResponse(message1.getDialogId(), message1,
-                                "Message is deleted successful.", "success"),
+                                "Message is deleted successfully.", "success"),
                         "DeleteMessageResponse",
                         "dialogs/delete");
 
@@ -410,7 +549,6 @@ class ClientHandler implements Runnable {
                         uploadSessions.remove(fileTransferRequest.getMessageId());
 
                         RepositoryManager.exportMessages(fileTransferRequest.getDialogId());
-                        System.out.println("Upload completed");
                     }
 
                     sentPacket = new Packet(
@@ -424,7 +562,7 @@ class ClientHandler implements Runnable {
                             "dialogs/upload");
 
                 } catch (IOException ex) {
-                    System.out.println("Failed to write file.");
+                    System.out.println(">>> ERROR: Failed to write file.");
                     long receivedBytes = fileUploadSession != null
                             ? fileUploadSession.getReceivedBytes()
                             : 0L;
@@ -491,16 +629,14 @@ class ClientHandler implements Runnable {
                                     "FileDownloadResponse",
                                     "dialogs/download");
 
-                            System.out.println("Sent: " + sent + "/" + file.length() + "bytes");
-
                             send(objectMapper.writeValueAsString(chunkPacket));
                         }
-                    } catch (FileNotFoundException e) {
-                        System.out.println("File not found!");
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        System.out.println("Failed to process file.");
-                        e.printStackTrace();
+                    } catch (FileNotFoundException ex) {
+                        System.out.println(">>> ERROR: File with path '" + file.getPath() + "' not found!");
+                        ex.printStackTrace();
+                    } catch (IOException ex) {
+                        System.out.println(">>> ERROR: Failed to process file.");
+                        ex.printStackTrace();
                     }
                 }).start();
                 return;
@@ -572,7 +708,7 @@ class ClientHandler implements Runnable {
                         socket.getInetAddress().getHostAddress(),
                         socket.getPort(),
                         new SearchUserResponse(searchUserRequest.getRequesterId(), userMetadatas1,
-                                "Searched users successfull.", "success"),
+                                "Searched users successfully.", "success"),
                         "SearchUserResponse",
                         packet.getCommand());
 
@@ -621,31 +757,79 @@ class ClientHandler implements Runnable {
                 RepositoryManager.exportUsers();
 
                 break;
-            default:
-                System.out.println("?");
+            case "connection/close":
+                String targetUserId = (String) packet.getData();
 
+                Menu menu = Menu.getInstance();
+                ContentPage contentPage = (ContentPage) menu.getContext("contentPage");
+                SwingUtilities.invokeLater(() -> {
+                    if (contentPage != null) {
+                        contentPage.removeClient(targetUserId);
+                    }
+                });
+
+                TCPServer.removeClient(targetUserId);
+
+                this.userId = null;
+
+                // close();
+
+                return;
+            default:
+                System.out.println(">>> ERROR: Packet received with unknown command '" + packet.getCommand() + "'.");
         }
 
         try {
             send(objectMapper.writeValueAsString(sentPacket));
-        } catch (Exception ex) {
-            System.out.println("Failed to send packet!");
+        } catch (IOException ex) {
+            System.out.println(">>> ERROR: Failed to send packet!");
             ex.printStackTrace();
         }
     }
 
     public synchronized void send(String message) throws IOException {
-        writer.write(message);
-        writer.newLine();
-        writer.flush();
+        if (!socket.isClosed()) {
+            writer.write(message);
+            writer.newLine();
+            writer.flush();
+        }
+    }
+
+    public void forceClose() {
+        try {
+            if (this.socket != null && !this.socket.isClosed()) {
+                this.socket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void close() {
         try {
-            socket.close();
+            if (this.userId != null) {
+                Menu menu = Menu.getInstance();
+                ContentPage contentPage = (ContentPage) menu.getContext("contentPage");
+                SwingUtilities.invokeLater(() -> {
+                    if (contentPage != null) {
+                        contentPage.removeClient(userId);
+                    }
+                });
+
+                TCPServer.removeClient(userId);
+            }
+
+            if (socket != null && !socket.isClosed()) {
+                socket.close();
+            }
+
+            for (FileUploadSession session : uploadSessions.values()) {
+                session.close();
+            }
+            uploadSessions.clear();
             System.out.println("Client with port: " + socket.getPort() + " has disconnected.");
         } catch (IOException ex) {
-            System.out.println("Failed to close the client connection.");
+            System.out.println(">>> ERROR: Failed to close the client connection.");
         }
     }
 }

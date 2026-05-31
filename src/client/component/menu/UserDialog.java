@@ -9,12 +9,21 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Image;
+import java.awt.Insets;
 import java.awt.Point;
+import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.font.FontRenderContext;
+import java.awt.font.LineBreakMeasurer;
+import java.awt.font.TextAttribute;
 import java.io.File;
+import java.text.AttributedCharacterIterator;
+import java.text.AttributedString;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -23,10 +32,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
+import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
@@ -34,15 +46,18 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextField;
+import javax.swing.JTextArea;
+import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneLayout;
 import javax.swing.SwingUtilities;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import component.AppContext;
 import component.AppFrame;
 import component.PopupWindow;
+import component.picker.EmojiPicker;
 import domain.Dialog;
 import domain.FileMessage;
 import domain.IconMessage;
@@ -96,7 +111,10 @@ public class UserDialog implements AppContext {
 
     // Footer section
     private JButton fileUploadButton;
-    private JTextField messageInputField;
+    private JScrollPane messageInputScrollPane;
+    private JTextArea messageInputArea;
+    private JButton emojiButton;
+    private ImageIcon emojiIcon;
     private JButton sendButton;
     private ImageIcon fileUploadIcon;
     private ImageIcon sendIcon;
@@ -105,6 +123,9 @@ public class UserDialog implements AppContext {
     private Dimension informationWindowSize;
     private PopupWindow informationWindow;
     private InformationDialog informationDialog;
+
+    private PopupWindow emojiPickerWindow;
+    private EmojiPicker emojiPickerDialog;
 
     private final Map<String, CountDownLatch> pendingObjects = new ConcurrentHashMap<>();
 
@@ -139,11 +160,82 @@ public class UserDialog implements AppContext {
 
         // Footer initialization
         fileUploadButton = new JButton();
-        messageInputField = new JTextField();
+        messageInputArea = new JTextArea();
+        messageInputScrollPane = new JScrollPane(messageInputArea);
+        emojiButton = new JButton();
+        emojiIcon = new ImageIcon("assets/emoji.png");
+        Image scaledImage = emojiIcon.getImage().getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+        emojiIcon = new ImageIcon(scaledImage);
+
         sendButton = new JButton();
         fileUploadIcon = new ImageIcon("assets/file-image.png");
         sendIcon = new ImageIcon("assets/send-horizontal.png");
         likeIcon = new ImageIcon("assets/thumbs-up.png");
+
+        Dimension emojiPickerSize = new Dimension(500, 600);
+        emojiPickerWindow = new PopupWindow(emojiPickerSize, "Chọn biểu tượng cảm xúc");
+        emojiPickerDialog = new EmojiPicker(emojiPickerWindow.getRootComponent());
+
+        emojiPickerDialog.setSubmitAction(l -> {
+            ImageIcon imageIcon = emojiPickerDialog.submit();
+
+            if (imageIcon != null) {
+                CountDownLatch countDownLatch = new CountDownLatch(1);
+
+                IconMessage iconMessage = new IconMessage(UUID.randomUUID().toString(), dialog.getId(), "",
+                        userLogin.getId(), null, imageIcon.getDescription(), LocalDateTime.now(), "sent");
+                pendingObjects.put(iconMessage.getId(), countDownLatch);
+                PacketService
+                        .sendMessage(new SendMessageRequest(userLogin.getId(), dialog.getId(), iconMessage));
+
+                JPanel iconWrapper = createMessageWrapper(iconMessage);
+                bodyContainer.add(iconWrapper);
+                bodyContainer.revalidate();
+                bodyContainer.repaint();
+
+                emojiPickerDialog.reset();
+
+                new Thread(() -> {
+                    try {
+                        boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
+
+                        if (!success) {
+                            AppFrame appFrame = AppFrame.getInstance();
+
+                            appFrame.reset();
+
+                            AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
+
+                            appFrame.setMinimumSize(loginContext.getSize());
+                            appFrame.setSize(loginContext.getSize());
+
+                            loginContext.draw();
+
+                            appFrame.getContentPane().revalidate();
+                            appFrame.getContentPane().repaint();
+
+                            SwingUtilities.invokeLater(() -> {
+                                JOptionPane.showMessageDialog(
+                                        null,
+                                        "Gửi tin nhắn không thành công",
+                                        "Server không phản hồi!",
+                                        JOptionPane.ERROR_MESSAGE);
+                            });
+                        }
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
+
+                emojiPickerWindow.close();
+            }
+        });
+
+        emojiPickerDialog.setCancelAction(l -> {
+            emojiPickerDialog.reset();
+            emojiPickerWindow.close();
+        });
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -180,7 +272,6 @@ public class UserDialog implements AppContext {
         userAvatar.setPreferredSize(new Dimension(50, 50));
         userAvatar.setFocusable(false);
         userAvatar.addActionListener(l -> {
-            System.out.println("View user profile...");
             informationDialog.loadDialog(dialog);
             informationDialog.draw();
             informationWindow.draw();
@@ -196,23 +287,56 @@ public class UserDialog implements AppContext {
 
         bodyScrollPane.getVerticalScrollBar().setUnitIncrement(16);
         bodyScrollPane.setLayout(new ScrollPaneLayout());
-        bodyScrollPane.setPreferredSize(new Dimension(size.width - 10, size.height - 130));
+        bodyScrollPane.setPreferredSize(new Dimension(size.width - 10, size.height - 140));
         bodyScrollPane.setBackground(Color.lightGray);
 
         // Footer section
-        footerContainer.setLayout(new FlowLayout(FlowLayout.LEFT));
+
+        JPanel fileUploadButtonWrapper = new JPanel(new BorderLayout());
+        fileUploadButtonWrapper.setPreferredSize(new Dimension(45, 50));
+        fileUploadButtonWrapper.setMaximumSize(new Dimension(45, 50));
+        fileUploadButtonWrapper.setMinimumSize(new Dimension(45, 50));
+        fileUploadButtonWrapper.setBackground(Color.orange);
+        fileUploadButtonWrapper.add(fileUploadButton, BorderLayout.CENTER);
+        fileUploadButtonWrapper.setAlignmentY(Component.BOTTOM_ALIGNMENT);
+        fileUploadButtonWrapper.setBorder(new EmptyBorder(5, 5, 5, 0));
+
+        JPanel messageInputWrapper = new JPanel(new BorderLayout());
+        messageInputWrapper.setBackground(Color.orange);
+        messageInputWrapper.add(messageInputScrollPane, BorderLayout.CENTER);
+        messageInputWrapper.setAlignmentY(Component.BOTTOM_ALIGNMENT);
+        messageInputWrapper.setBorder(new EmptyBorder(5, 5, 5, 0));
+
+        JPanel emojiButtonWrapper = new JPanel(new BorderLayout());
+        emojiButtonWrapper.setPreferredSize(new Dimension(45, 50));
+        emojiButtonWrapper.setMaximumSize(new Dimension(45, 50));
+        emojiButtonWrapper.setMinimumSize(new Dimension(45, 50));
+        emojiButtonWrapper.setBackground(Color.orange);
+        emojiButtonWrapper.add(emojiButton, BorderLayout.CENTER);
+        emojiButtonWrapper.setAlignmentY(Component.BOTTOM_ALIGNMENT);
+        emojiButtonWrapper.setBorder(new EmptyBorder(5, 5, 5, 0));
+
+        JPanel sendButtonWrapper = new JPanel(new BorderLayout());
+        sendButtonWrapper.setPreferredSize(new Dimension(50, 50));
+        sendButtonWrapper.setMaximumSize(new Dimension(50, 50));
+        sendButtonWrapper.setMinimumSize(new Dimension(50, 50));
+        sendButtonWrapper.setBackground(Color.orange);
+        sendButtonWrapper.add(sendButton, BorderLayout.CENTER);
+        sendButtonWrapper.setAlignmentY(Component.BOTTOM_ALIGNMENT);
+        sendButtonWrapper.setBorder(new EmptyBorder(5, 5, 5, 5));
+
+        footerContainer.setLayout(new BoxLayout(footerContainer, BoxLayout.X_AXIS));
         footerContainer.setPreferredSize(new Dimension(size.width - 10, 50));
         footerContainer.setBackground(Color.orange);
-        footerContainer.add(fileUploadButton);
-        footerContainer.add(messageInputField);
-        footerContainer.add(sendButton);
+        footerContainer.add(fileUploadButtonWrapper);
+        footerContainer.add(messageInputWrapper);
+        footerContainer.add(emojiButtonWrapper);
+        footerContainer.add(sendButtonWrapper);
 
         fileUploadButton.setIcon(fileUploadIcon);
-        fileUploadButton.setPreferredSize(new Dimension(40, 40));
+        // fileUploadButton.setPreferredSize(new Dimension(40, 40));
         fileUploadButton.setFocusable(false);
         fileUploadButton.addActionListener(l -> {
-            System.out.println("Add new file:");
-
             int returnVal = fileChooser.showOpenDialog(rootContainer);
 
             if (returnVal == JFileChooser.APPROVE_OPTION) {
@@ -251,85 +375,175 @@ public class UserDialog implements AppContext {
 
         });
 
-        messageInputField.setPreferredSize(new Dimension(size.width - 120, 40));
-        messageInputField.setFont(textFont);
-        // messageInputField.addKeyListener(new KeyAdapter() {
-        // public void keyTyped(KeyEvent e) {
-        // System.out.println("Input: '" + messageInputField.getText() + "'.");
+        messageInputScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        messageInputScrollPane.setLayout(new ScrollPaneLayout());
+        messageInputScrollPane.setPreferredSize(new Dimension(size.width - 180, 40));
+
+        // messageInputArea.addComponentListener(new ComponentAdapter() {
+        // @Override
+        // public void componentResized(ComponentEvent e) {
+        // Element root = messageInputArea.getDocument().getDefaultRootElement();
+        // int currentLineCount = UserDialog.countLines(messageInputArea);
+
+        // FontMetrics fontMetrics =
+        // messageInputArea.getFontMetrics(messageInputArea.getFont());
+        // int fontHeight = fontMetrics.getHeight();
+
+        // int heightRatio = messageInputArea.getPreferredSize().height / fontHeight;
+
+        // // int totalVisualLines = 0;
+        // // View rootView = messageInputArea.getUI().getRootView(messageInputArea);
+        // // View mainView = rootView.getView(0);
+
+        // // for (int i = 0; i < mainView.getViewCount(); i++) {
+        // // View paragraphView = mainView.getView(i);
+        // // totalVisualLines += paragraphView.getViewCount();
+        // // }
+
+        // // totalVisualLines = Math.max(totalVisualLines, 1);
+
+        // // System.out.println("Total Visual line count: " + totalVisualLines);
+
+        // // bodyScrollPane.setPreferredSize(
+        // // new Dimension(size.width - 10, size.height - 140 - 40 *
+        // // (Math.min(heightRatio - 1, 4))));
+
+        // // footerContainer.setPreferredSize(
+        // // new Dimension(size.width - 10, 50 + 40 * (Math.min(heightRatio - 1,
+        // // 4))));
+
+        // // rootContainer.revalidate();
+        // // rootContainer.repaint();
+        // // previousLineCount[0] = totalVisualLines;
         // }
         // });
-        messageInputField.getDocument().addDocumentListener(new DocumentListener() {
+
+        messageInputArea.setFont(new Font("Consolas", Font.PLAIN, 25));
+        messageInputArea.setLineWrap(true);
+        messageInputArea.setWrapStyleWord(true);
+        messageInputArea.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) {
                 updateText();
+                messageInputArea.setCaretPosition(messageInputArea.getDocument().getLength());
             }
 
             public void removeUpdate(DocumentEvent e) {
                 updateText();
+                messageInputArea.setCaretPosition(messageInputArea.getDocument().getLength());
             }
 
             public void changedUpdate(DocumentEvent e) {
                 updateText();
+                messageInputArea.setCaretPosition(messageInputArea.getDocument().getLength());
             }
 
             private void updateText() {
-                String fullText = messageInputField.getText();
-                System.out.println("Input: '" + fullText + "'.");
+                String fullText = messageInputArea.getText();
+                int currentLineCount = UserDialog.countLines(messageInputArea);
+
+                bodyScrollPane.setPreferredSize(
+                        new Dimension(size.width - 10, size.height - 140 - 40 *
+                                (Math.min(currentLineCount - 1, 4))));
+
+                footerContainer.setPreferredSize(
+                        new Dimension(size.width - 10, 50 + 40 * (Math.min(currentLineCount - 1,
+                                4))));
+
+                rootContainer.revalidate();
+                rootContainer.repaint();
 
                 sendButton.setIcon(fullText.isBlank() ? likeIcon : sendIcon);
             }
         });
-        messageInputField.addActionListener(l -> {
-            System.out.println("Input: '" + messageInputField.getText() + "'.");
 
-            if (!messageInputField.getText().isBlank()) {
-                TextMessage textMessage = new TextMessage(UUID.randomUUID().toString(), dialog.getId(),
-                        messageInputField.getText().strip(), userLogin.getId(), null, LocalDateTime.now(),
-                        "sent");
+        InputMap inputMap = messageInputArea.getInputMap();
+        ActionMap actionMap = messageInputArea.getActionMap();
 
-                CountDownLatch countDownLatch = new CountDownLatch(1);
-                pendingObjects.put(textMessage.getId(), countDownLatch);
+        inputMap.put(KeyStroke.getKeyStroke("ENTER"), "SUBMIT_ACTION");
+        actionMap.put("SUBMIT_ACTION", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
 
-                PacketService
-                        .sendMessage(new SendMessageRequest(userLogin.getId(), dialog.getId(), textMessage));
+                if (!messageInputArea.getText().isBlank()) {
+                    TextMessage textMessage = new TextMessage(UUID.randomUUID().toString(), dialog.getId(),
+                            messageInputArea.getText().strip(), userLogin.getId(), null, LocalDateTime.now(),
+                            "sent");
 
-                new Thread(() -> {
-                    try {
-                        boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
+                    CountDownLatch countDownLatch = new CountDownLatch(1);
+                    pendingObjects.put(textMessage.getId(), countDownLatch);
 
-                        if (!success) {
-                            SwingUtilities.invokeLater(() -> {
-                                JOptionPane.showMessageDialog(
-                                        null,
-                                        "Gửi tin nhắn không thành công",
-                                        "Server không phản hồi!",
-                                        JOptionPane.ERROR_MESSAGE);
-                            });
+                    PacketService
+                            .sendMessage(new SendMessageRequest(userLogin.getId(), dialog.getId(), textMessage));
+
+                    new Thread(() -> {
+                        try {
+                            boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
+
+                            if (!success) {
+                                AppFrame appFrame = AppFrame.getInstance();
+
+                                appFrame.reset();
+
+                                AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
+
+                                appFrame.setMinimumSize(loginContext.getSize());
+                                appFrame.setSize(loginContext.getSize());
+
+                                loginContext.draw();
+
+                                appFrame.getContentPane().revalidate();
+                                appFrame.getContentPane().repaint();
+
+                                SwingUtilities.invokeLater(() -> {
+                                    JOptionPane.showMessageDialog(
+                                            null,
+                                            "Gửi tin nhắn không thành công",
+                                            "Server không phản hồi!",
+                                            JOptionPane.ERROR_MESSAGE);
+                                });
+                            }
+
+                        } catch (InterruptedException ex) {
+                            ex.printStackTrace();
                         }
+                    }).start();
 
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }).start();
+                    JPanel textWrapper = createMessageWrapper(textMessage);
+                    bodyContainer.add(textWrapper);
+                    bodyContainer.revalidate();
+                    bodyContainer.repaint();
 
-                JPanel textWrapper = createMessageWrapper(textMessage);
-                bodyContainer.add(textWrapper);
-                bodyContainer.revalidate();
-                bodyContainer.repaint();
-
-                messageInputField.setText("");
+                    messageInputArea.setText("");
+                }
             }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke("shift ENTER"), "NEWLINE_ACTION");
+        actionMap.put("NEWLINE_ACTION", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                messageInputArea.replaceSelection("\n");
+                messageInputArea.setCaretPosition(messageInputArea.getDocument().getLength());
+            }
+        });
+
+        emojiButton.setIcon(emojiIcon);
+        emojiButton.setPreferredSize(new Dimension(40, 40));
+        emojiButton.setFocusable(false);
+        emojiButton.addActionListener(l -> {
+            emojiPickerDialog.draw();
+            emojiPickerWindow.draw();
         });
 
         sendButton.setIcon(likeIcon);
         sendButton.setPreferredSize(new Dimension(40, 40));
         sendButton.setFocusable(false);
         sendButton.addActionListener(l -> {
-            System.out.println("Input: '" + messageInputField.getText() + "'.");
             CountDownLatch countDownLatch = new CountDownLatch(1);
 
-            if (!messageInputField.getText().isBlank()) {
+            if (!messageInputArea.getText().isBlank()) {
                 TextMessage textMessage = new TextMessage(UUID.randomUUID().toString(), dialog.getId(),
-                        messageInputField.getText().strip(), userLogin.getId(), null, LocalDateTime.now(),
+                        messageInputArea.getText().strip(), userLogin.getId(), null, LocalDateTime.now(),
                         "sent");
                 pendingObjects.put(textMessage.getId(), countDownLatch);
                 PacketService
@@ -340,7 +554,7 @@ public class UserDialog implements AppContext {
                 bodyContainer.revalidate();
                 bodyContainer.repaint();
 
-                messageInputField.setText("");
+                messageInputArea.setText("");
             } else {
                 IconMessage iconMessage = new IconMessage(UUID.randomUUID().toString(), dialog.getId(), "👍",
                         userLogin.getId(), null, "assets/like.png", LocalDateTime.now(), "sent");
@@ -359,6 +573,20 @@ public class UserDialog implements AppContext {
                     boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
 
                     if (!success) {
+                        AppFrame appFrame = AppFrame.getInstance();
+
+                        appFrame.reset();
+
+                        AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
+
+                        appFrame.setMinimumSize(loginContext.getSize());
+                        appFrame.setSize(loginContext.getSize());
+
+                        loginContext.draw();
+
+                        appFrame.getContentPane().revalidate();
+                        appFrame.getContentPane().repaint();
+
                         SwingUtilities.invokeLater(() -> {
                             JOptionPane.showMessageDialog(
                                     null,
@@ -373,6 +601,67 @@ public class UserDialog implements AppContext {
                 }
             }).start();
         });
+    }
+
+    public static List<String> customSplit(String text, String delimeter) {
+        List<String> result = new ArrayList<>();
+        if (text == null || text.isEmpty()) {
+            return List.of("");
+        }
+
+        if (text.indexOf(delimeter.charAt(0)) < 0) {
+            return List.of(text);
+        }
+
+        List<Integer> delimeterIndexes = new ArrayList<>();
+        int index = 0;
+        int temp = 0;
+        while ((temp = text.indexOf(delimeter.charAt(0), index)) != -1) {
+            delimeterIndexes.add(temp);
+
+            index = temp + 1;
+        }
+
+        for (int i = 0; i < delimeterIndexes.size(); ++i) {
+            result.add(text.substring(i - 1 < 0 ? 0 : delimeterIndexes.get(i - 1) + 1, delimeterIndexes.get(i)));
+        }
+
+        if (delimeterIndexes.getLast() == text.length()) {
+            result.add("");
+        } else {
+            result.add(text.substring(delimeterIndexes.getLast() + 1));
+        }
+
+        return result;
+    }
+
+    public static int countLines(JTextArea ta) {
+        final Insets in = ta.getInsets();
+        final float formatWidth = ta.getWidth() - in.left - in.right;
+        final var text = ta.getText();
+        int countTotal = 0;
+
+        for (var line : customSplit(text, "\n")) {
+            if (line.isEmpty()) {
+                countTotal++;
+                continue;
+            }
+            AttributedString attString = new AttributedString(line);
+            attString.addAttribute(TextAttribute.FONT, ta.getFont());
+            FontRenderContext frc = ta.getFontMetrics(ta.getFont()).getFontRenderContext();
+            AttributedCharacterIterator charIt = attString.getIterator();
+            LineBreakMeasurer lineMeasurer = new LineBreakMeasurer(charIt, frc);
+            lineMeasurer.setPosition(charIt.getBeginIndex());
+
+            int count = 0;
+            while (lineMeasurer.getPosition() < charIt.getEndIndex()) {
+                lineMeasurer.nextLayout(formatWidth);
+                count++;
+            }
+            countTotal += count;
+        }
+
+        return countTotal;
     }
 
     private JPanel createMessageWrapper(Message message) {
@@ -402,7 +691,6 @@ public class UserDialog implements AppContext {
             item.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    System.out.println("Download file...");
 
                     JFileChooser chooser = new JFileChooser();
 
@@ -538,13 +826,12 @@ public class UserDialog implements AppContext {
                     "Bạn có chắc muốn xóa tin nhắn đã chọn (tin nhắn sẽ không thể khôi phục)?", "Xóa tin nhắn?",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
-                System.out.println("Deleted message.");
+
                 CountDownLatch countDownLatch = new CountDownLatch(1);
                 pendingObjects.put(originMessage.getId(), countDownLatch);
                 PacketService.deleteMessage(
                         new DeleteMessageRequest(userLogin.getId(), dialog.getId(), originMessage));
 
-                // bodyContainer.remove(wrapper);
                 wrapper.setVisible(false);
                 bodyContainer.revalidate();
                 bodyContainer.repaint();
@@ -554,6 +841,20 @@ public class UserDialog implements AppContext {
                         boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
 
                         if (!success) {
+                            AppFrame appFrame = AppFrame.getInstance();
+
+                            appFrame.reset();
+
+                            AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
+
+                            appFrame.setMinimumSize(loginContext.getSize());
+                            appFrame.setSize(loginContext.getSize());
+
+                            loginContext.draw();
+
+                            appFrame.getContentPane().revalidate();
+                            appFrame.getContentPane().repaint();
+
                             SwingUtilities.invokeLater(() -> {
                                 JOptionPane.showMessageDialog(
                                         null,
@@ -731,6 +1032,20 @@ public class UserDialog implements AppContext {
                     boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
 
                     if (!success) {
+                        AppFrame appFrame = AppFrame.getInstance();
+
+                        appFrame.reset();
+
+                        AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
+
+                        appFrame.setMinimumSize(loginContext.getSize());
+                        appFrame.setSize(loginContext.getSize());
+
+                        loginContext.draw();
+
+                        appFrame.getContentPane().revalidate();
+                        appFrame.getContentPane().repaint();
+
                         SwingUtilities.invokeLater(() -> {
                             JOptionPane.showMessageDialog(
                                     null,
@@ -833,7 +1148,6 @@ public class UserDialog implements AppContext {
         JComponent item = (JComponent) rowPanel.getComponent(2);
 
         if (sendMessageResponse.getStatus().equals("success")) {
-            // System.out.println("Called ");
         } else {
             item.setBackground(Color.red);
             JOptionPane.showMessageDialog(null, sendMessageResponse.getMessage(),
@@ -856,8 +1170,6 @@ public class UserDialog implements AppContext {
         }
 
         if (fileTransferResponse.getStatus().equals("success")) {
-            System.out.println("Progress: " + fileTransferResponse.getSentBytes() + "/"
-                    + fileTransferResponse.getFileSize() + "bytes");
 
             if (fileTransferResponse.getSentBytes() >= fileTransferResponse.getFileSize()) {
                 JOptionPane.showMessageDialog(null,
@@ -882,9 +1194,6 @@ public class UserDialog implements AppContext {
         // }
 
         if (fileDownloadAck.getStatus().equals("success")) {
-            System.out.println("Progress: " + fileDownloadAck.getSentBytes() + "/"
-                    + fileDownloadAck.getFileSize() + "bytes");
-
             if (fileDownloadAck.getSentBytes() >= fileDownloadAck.getFileSize()) {
                 JOptionPane.showMessageDialog(null,
                         "File " + fileDownloadAck.getFileName() + " đã được tải xuống thành công.",

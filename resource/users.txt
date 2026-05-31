@@ -9,13 +9,13 @@
   "createdAt" : "2026-05-27"
 }, {
   "id" : "e932ebdf-bd82-4330-84f8-1bae70967191",
-  "name" : "admin1",
+  "name" : "admin",
   "username" : "admin",
   "password" : "admin",
   "email" : "admin@example.com",
   "dob" : "2000-01-01",
   "gender" : "MALE",
-  "createdAt" : "2026-05-27"
+  "createdAt" : "2026-06-01"
 }, {
   "id" : "c6bb185b-b1fb-48f5-8042-32781d5f586f",
   "name" : "Hoàng Bảo",

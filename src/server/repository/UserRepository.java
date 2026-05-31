@@ -37,30 +37,6 @@ public class UserRepository implements Repository {
 
     public void importData(String path) {
         try {
-            // BufferedReader br = new BufferedReader(new FileReader(path));
-
-            // String line;
-            // int lineCount = 0;
-
-            // br.readLine(); // Ignore the header line
-            // while ((line = br.readLine()) != null) {
-            // User parsedUser = Parser.parseUser(line);
-
-            // if (parsedUser != null) {
-            // storage.put(parsedUser.getId(), parsedUser);
-            // usernameIndexedStorage.put(parsedUser.getUsername(), parsedUser);
-            // } else {
-            // System.out.println(">>> ERROR: Failed to parse user at line " + lineCount);
-            // --lineCount;
-            // }
-
-            // ++lineCount;
-            // }
-
-            // System.out.println(">>> Parsed total " + lineCount + " user(s) from file '" +
-            // path + "'.");
-
-            // br.close();
             File file = new File(path);
 
             List<User> users = objectMapper.readValue(file, new TypeReference<List<User>>() {

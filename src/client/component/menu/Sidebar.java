@@ -145,7 +145,6 @@ public class Sidebar implements AppContext {
         createGroupDialog.setSubmitAction(l -> {
             CreateGroupRequest createGroupRequest = createGroupDialog.submit();
             if (createGroupRequest != null) {
-                System.out.println("New group");
                 List<String> participants = createGroupRequest.getParticipantIds();
                 Dialog newDialog = new Dialog("temp", createGroupRequest.getGroupName(), participants,
                         new ArrayList<>(), "group",
@@ -168,6 +167,21 @@ public class Sidebar implements AppContext {
                         boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
 
                         if (!success) {
+
+                            AppFrame appFrame = AppFrame.getInstance();
+
+                            appFrame.reset();
+
+                            AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
+
+                            appFrame.setMinimumSize(loginContext.getSize());
+                            appFrame.setSize(loginContext.getSize());
+
+                            loginContext.draw();
+
+                            appFrame.getContentPane().revalidate();
+                            appFrame.getContentPane().repaint();
+
                             SwingUtilities.invokeLater(() -> {
                                 JOptionPane.showMessageDialog(
                                         null,
@@ -234,16 +248,6 @@ public class Sidebar implements AppContext {
         headerLabel.setFont(this.headerFont);
         headerLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
 
-        // createGroupButton.setText("Tạo nhóm");
-        // createGroupButton.setFocusable(false);
-        // createGroupButton.setIcon(createGroupIcon);
-        // createGroupButton.addActionListener(l -> {
-        // System.out.println("Create group");
-        // createGroupDialog.reset();
-        // createGroupDialog.draw();
-        // createGroupPopupWindow.draw();
-        // });
-
         createGroupButton.setText("Tạo nhóm");
         createGroupButton.setFocusable(false);
         createGroupButton.setIcon(createGroupIcon);
@@ -251,17 +255,10 @@ public class Sidebar implements AppContext {
         createGroupButton.setMinimumSize(new Dimension(130, 35));
         createGroupButton.setMaximumSize(new Dimension(130, 35));
         createGroupButton.addActionListener(l -> {
-            System.out.println("Create group");
             createGroupDialog.reset();
             createGroupDialog.draw();
             createGroupPopupWindow.draw();
         });
-
-        // searchContainer.setLayout(new FlowLayout());
-        // searchContainer.setPreferredSize(new Dimension(size.width - 20, 45));
-        // searchContainer.setBackground(Color.white);
-        // searchContainer.add(searchTextField);
-        // searchContainer.add(searchButton);
 
         searchContainer.setLayout(new BorderLayout(8, 0));
         searchContainer.setPreferredSize(new Dimension(size.width - 20, 45));
@@ -656,6 +653,20 @@ public class Sidebar implements AppContext {
                 boolean success = countDownLatch1.await(5, TimeUnit.SECONDS);
 
                 if (!success) {
+                    AppFrame appFrame = AppFrame.getInstance();
+
+                    appFrame.reset();
+
+                    AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
+
+                    appFrame.setMinimumSize(loginContext.getSize());
+                    appFrame.setSize(loginContext.getSize());
+
+                    loginContext.draw();
+
+                    appFrame.getContentPane().revalidate();
+                    appFrame.getContentPane().repaint();
+
                     SwingUtilities.invokeLater(() -> {
                         JOptionPane.showMessageDialog(
                                 null,
@@ -675,6 +686,20 @@ public class Sidebar implements AppContext {
                 boolean success = countDownLatch2.await(5, TimeUnit.SECONDS);
 
                 if (!success) {
+                    AppFrame appFrame = AppFrame.getInstance();
+
+                    appFrame.reset();
+
+                    AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
+
+                    appFrame.setMinimumSize(loginContext.getSize());
+                    appFrame.setSize(loginContext.getSize());
+
+                    loginContext.draw();
+
+                    appFrame.getContentPane().revalidate();
+                    appFrame.getContentPane().repaint();
+
                     SwingUtilities.invokeLater(() -> {
                         JOptionPane.showMessageDialog(
                                 null,
@@ -763,7 +788,6 @@ public class Sidebar implements AppContext {
         }
 
         if (searchUserResponse.getStatus().equals("success")) {
-            System.out.println("Success fetch all users metadata");
             searchUserResponse.getFoundUsers().forEach(item -> userStorage.put(item.getId(), item));
         } else {
             JOptionPane.showMessageDialog(null, searchUserResponse.getMessage(),

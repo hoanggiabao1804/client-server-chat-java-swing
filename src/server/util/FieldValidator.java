@@ -9,6 +9,7 @@ public class FieldValidator {
     private static final String EMAIL_REGEX = "^(?=.{1,64}@)[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*@[^-][A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$";
     private static final String CITIZEN_ID_REGEX = "^\\d+$";
     private static final String USERNAME_REGEX = "^[a-zA-Z0-9]([._-](?![._-])|[a-zA-Z0-9]){1,18}[a-zA-Z0-9]$";
+    private static final String IPV4_REGEX = "^(?:25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)){3}$";
     private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     public static String validateName(String name) {
@@ -95,6 +96,22 @@ public class FieldValidator {
             LocalDate.parse(dateText, dateTimeFormatter);
         } catch (Exception ex) {
             return "Thời gian phải đúng định dạng <dd-MM-yyyy>.";
+        }
+
+        return "";
+    }
+
+    public static String validateIPv4Address(String ipv4) {
+        if (ipv4 == null || ipv4.isBlank()) {
+            return "Địa chỉ IPv4 không được để trống.";
+        }
+
+        if (ipv4.equals("localhost")) {
+            return "";
+        }
+
+        if (!Pattern.matches(IPV4_REGEX, ipv4)) {
+            return "Địa chỉ IPv4 không hợp lệ.\nIPv4 phải có dạng A.B.C.D trong đó A,B,C,D nằm trong khoảng 0-255.\nĐồng thời không được có leading zeros.\nVí dụ hợp lệ: 192.168.1.10, 255.255.255.255, 0.0.0.0,...\nVí dụ không hợp lệ: 256.1.2.3, 192.168.01.1,...";
         }
 
         return "";

@@ -771,6 +771,20 @@ public class UserProfile implements AppContext {
                     boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
 
                     if (!success) {
+                        AppFrame appFrame = AppFrame.getInstance();
+
+                        appFrame.reset();
+
+                        AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
+
+                        appFrame.setMinimumSize(loginContext.getSize());
+                        appFrame.setSize(loginContext.getSize());
+
+                        loginContext.draw();
+
+                        appFrame.getContentPane().revalidate();
+                        appFrame.getContentPane().repaint();
+
                         SwingUtilities.invokeLater(() -> {
                             JOptionPane.showMessageDialog(
                                     null,
@@ -797,7 +811,7 @@ public class UserProfile implements AppContext {
         countDownLatch.countDown();
 
         if (userUpdateResponse.getStatus().equals("success")) {
-            System.out.println("Updated user's information successful.");
+            System.out.println("Update info successfully.");
         } else {
             JOptionPane.showMessageDialog(null, userUpdateResponse.getMessage(),
                     "Cập nhật thông tin người dùng thất bại",

@@ -14,16 +14,19 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
+import component.AppContext;
 import component.AppFrame;
 import component.auth.LoginForm;
 import component.auth.RegisterForm;
 import component.menu.Sidebar;
 import component.menu.UserDialog;
+import component.menu.UserProfile;
 import domain.Packet;
 import domain.dto.AuthResponse;
 import domain.dto.CreateGroupResponse;
@@ -48,27 +51,75 @@ public class TCPClient {
 	private static final ObjectMapper objectMapper = ObjectMapperFactory.create();
 	private static final BlockingQueue<Packet> sendQueue = new LinkedBlockingQueue<>();
 	private static final Map<String, FileDownloadSessionClient> downloadSessions = new ConcurrentHashMap<>();
-	private static final NetworkConfig networkConfig = loadConfig();
+	private static final Map<String, Thread> clientThreads = new ConcurrentHashMap<>();
+	private static NetworkConfig networkConfig = loadConfig();
+	private static Socket socket;
 
 	public static void main(String arg[]) {
 		objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
+		PacketService.setNetWorkConfig(networkConfig);
 
-		try (Socket socket = new Socket(networkConfig.getIpAddress(), networkConfig.getPort())) {
-			PacketService.setSocket(socket);
+		Thread uiThread = new Thread(() -> {
+			AppFrame app = AppFrame.getInstance();
+			app.run();
+		});
+		clientThreads.put("uiThread", uiThread);
+		uiThread.start();
+
+		openNewConnection();
+	}
+
+	private static void openNewConnection() {
+		Thread oldWriterThread = clientThreads.get("writerThread");
+		Thread oldReaderThread = clientThreads.get("readerThread");
+
+		if (oldWriterThread != null)
+			oldWriterThread.interrupt();
+		if (oldReaderThread != null && Thread.currentThread() != oldReaderThread)
+			oldReaderThread.interrupt();
+
+		close();
+
+		boolean isConnected = false;
+		while (!isConnected) {
+			try {
+				System.out.println(
+						"Connecting to server " + networkConfig.getIpAddress() + ":" + networkConfig.getPort() + "...");
+
+				socket = new Socket(networkConfig.getIpAddress(), networkConfig.getPort());
+
+				isConnected = true;
+				sendQueue.clear();
+				System.out.println(">>> Connect to server successful!");
+			} catch (ConnectException ex) {
+				System.out.println(">>> Server has not opened yet. Trying to reconnect after 3s...");
+				try {
+					Thread.sleep(3000);
+				} catch (InterruptedException ie) {
+					Thread.currentThread().interrupt();
+					return;
+				}
+			} catch (IOException ex) {
+				System.out.println(">>> I/O error. Trying to reconnect after 3s...");
+				try {
+					Thread.sleep(3000);
+				} catch (InterruptedException ie) {
+					Thread.currentThread().interrupt();
+					return;
+				}
+			}
+		}
+
+		try {
 			BufferedReader reader = new BufferedReader(
 					new InputStreamReader(socket.getInputStream()));
 
 			BufferedWriter writer = new BufferedWriter(
 					new OutputStreamWriter(socket.getOutputStream()));
 
-			Thread uiThread = new Thread(() -> {
-				AppFrame app = AppFrame.getInstance();
-				app.run();
-			});
-
 			Thread writerThread = new Thread(() -> {
 				try {
-					while (true) {
+					while (!Thread.currentThread().isInterrupted()) {
 						Packet packet = sendQueue.take();
 
 						String json = objectMapper.writeValueAsString(packet);
@@ -82,8 +133,11 @@ public class TCPClient {
 							break;
 						}
 					}
+				} catch (InterruptedException e) {
+					System.out.println(">>> ERROR: Writer thread was interrupted and stopped.");
 				} catch (Exception e) {
-					System.out.println("Writer stopped");
+					System.out.println(">>> ERROR: Writer stopped in new connection");
+					e.printStackTrace();
 				}
 			});
 
@@ -94,43 +148,35 @@ public class TCPClient {
 					while ((line = reader.readLine()) != null) {
 						Packet packet = objectMapper.readValue(line, Packet.class);
 
-						// System.out.println("Received from server: " + packet.getType());
-
 						handleServerPacket(packet);
 					}
 				} catch (Exception e) {
-					System.out.println("Reader stopped");
+					System.out.println(">>> ERROR: Reader stopped in new connection");
 					e.printStackTrace();
 				}
-
-				System.out.println("End???");
 			});
 
-			uiThread.start();
+			clientThreads.put("writerThread", writerThread);
+			clientThreads.put("readerThread", readerThread);
+
 			writerThread.start();
 			readerThread.start();
-
-			uiThread.join();
-			writerThread.join();
-			readerThread.join();
-		} catch (ConnectException ex) {
-			System.out.println("Failed to connect to server!");
 		} catch (IOException ex) {
-			System.out.println("There're some error??");
+			System.out.println(">>> ERROR: Failed to setup I/O streams!");
 			ex.printStackTrace();
-		} catch (InterruptedException ex) {
-			System.out.println("There're some error.");
-			ex.printStackTrace();
-		} finally {
-			for (FileDownloadSessionClient session : downloadSessions.values()) {
-				try {
-					session.close();
-				} catch (IOException ex) {
-					System.out.println("Failed to close session");
-					ex.printStackTrace();
-				}
-			}
-			downloadSessions.clear();
+		}
+	}
+
+	public static void updateNetWorkConfig(NetworkConfig networkConfig) {
+		TCPClient.networkConfig.setIpAddress(networkConfig.getIpAddress());
+		TCPClient.networkConfig.setPort(networkConfig.getPort());
+
+		try {
+			File file = new File("client-config/config.json");
+			objectMapper.writeValue(file, TCPClient.networkConfig);
+		} catch (IOException e) {
+			System.out.println(">>> ERROR: Failed to export client config.");
+			e.printStackTrace();
 		}
 	}
 
@@ -194,13 +240,6 @@ public class TCPClient {
 			case "dialogs/id":
 				DialogContentResponse dialogContentResponse = objectMapper.convertValue(packet.getData(),
 						DialogContentResponse.class);
-
-				try {
-					System.out.println("Response from server: " +
-							objectMapper.writeValueAsString(dialogContentResponse));
-				} catch (Exception ex) {
-
-				}
 
 				LocalStorage.setDialogMessageContent(dialogContentResponse.getDialogId(),
 						dialogContentResponse.getMessageList());
@@ -296,13 +335,9 @@ public class TCPClient {
 					fileDownloadSession.write(fileDownloadResponse.getData());
 					long receivedBytes = fileDownloadSession.getReceivedBytes();
 
-					System.out.println("Progress: " + receivedBytes + "/"
-							+ fileDownloadResponse.getFileSize() + "bytes");
 					if (fileDownloadResponse.isLastChunk()) {
 						fileDownloadSession.close();
 						downloadSessions.remove(fileDownloadResponse.getMessageId());
-
-						System.out.println("Download completed");
 
 						UserDialog userDialog4 = (UserDialog) AppFrame.getInstance().getContextPools()
 								.getContext(fileDownloadResponse.getDialogId());
@@ -320,7 +355,7 @@ public class TCPClient {
 					}
 
 				} catch (IOException ex) {
-					System.out.println("Failed to write file.");
+					System.out.println(">>> ERROR: Failed to download file.");
 
 					ex.printStackTrace();
 				}
@@ -383,6 +418,13 @@ public class TCPClient {
 					LocalStorage.addUser(userUpdateResponse.getUserMetadata());
 				}
 
+				UserProfile userProfile = (UserProfile) AppFrame.getInstance().getContextPools()
+						.getContext("userProfile");
+
+				SwingUtilities.invokeLater(() -> {
+					userProfile.getResponse(userUpdateResponse);
+				});
+
 				break;
 
 			case "users/fetch-update":
@@ -394,12 +436,85 @@ public class TCPClient {
 				}
 
 				break;
+			case "connection/close":
+				String message = (String) packet.getData();
+				AppFrame appFrame = AppFrame.getInstance();
+
+				appFrame.reset();
+
+				AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
+
+				appFrame.setMinimumSize(loginContext.getSize());
+				appFrame.setSize(loginContext.getSize());
+
+				loginContext.draw();
+
+				appFrame.getContentPane().revalidate();
+				appFrame.getContentPane().repaint();
+
+				// close();
+
+				JOptionPane.showMessageDialog(
+						null,
+						message,
+						"Server không phản hồi!",
+						JOptionPane.WARNING_MESSAGE);
+
+				openNewConnection();
+
+				break;
+			case "connection/migrate":
+				NetworkConfig networkConfig = objectMapper.convertValue(packet.getData(), NetworkConfig.class);
+
+				updateNetWorkConfig(networkConfig);
+
+				AppFrame appFrame1 = AppFrame.getInstance();
+
+				appFrame1.reset();
+
+				AppContext loginContext1 = appFrame1.getContextPools().getContext("loginForm");
+
+				appFrame1.setMinimumSize(loginContext1.getSize());
+				appFrame1.setSize(loginContext1.getSize());
+
+				loginContext1.draw();
+
+				appFrame1.getContentPane().revalidate();
+				appFrame1.getContentPane().repaint();
+
+				// close();
+
+				JOptionPane.showMessageDialog(
+						null,
+						"Server hiện không còn phản hồi ở domain hiện tại.",
+						"Server không phản hồi!",
+						JOptionPane.WARNING_MESSAGE);
+
+				openNewConnection();
+
+				break;
 			default:
-				System.out.println("?");
+				System.out.println(">>> ERROR: Packet received with unknown command '" + packet.getCommand() + "'.");
 		}
 	}
 
 	public static synchronized void enqueuPacket(Packet packet) {
 		sendQueue.add(packet);
+	}
+
+	private static synchronized void close() {
+		try {
+			if (socket != null && !socket.isClosed()) {
+				socket.close();
+
+				for (FileDownloadSessionClient session : downloadSessions.values()) {
+					session.close();
+				}
+				downloadSessions.clear();
+			}
+
+		} catch (IOException ex) {
+			System.out.println(">>> ERROR: Failed to close the client connection.");
+		}
 	}
 }

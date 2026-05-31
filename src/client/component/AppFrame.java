@@ -8,6 +8,7 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
 import util.LocalStorage;
+import util.PacketService;
 
 public class AppFrame extends JFrame {
 
@@ -29,7 +30,9 @@ public class AppFrame extends JFrame {
                         "Bạn có chắc muốn thoát ứng dụng?", "Đóng ứng dụng?",
                         JOptionPane.YES_NO_OPTION,
                         JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
-                    // RepositoryManager.store();
+                    if (LocalStorage.getUserLogin() != null) {
+                        PacketService.closeConnection();
+                    }
                     System.exit(0);
                 }
             }

@@ -56,4 +56,206 @@
   "timestamp" : "2026-05-15T17:12:45",
   "tag" : "sent",
   "type" : "file"
+}, {
+  "id" : "11e3a4b4-11c8-472c-8a4f-79ebb60164e2",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "iconName" : "",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "iconPath" : "assets/emojis/melting-face.png",
+  "timestamp" : "2026-05-30T04:02:29.16235741",
+  "tag" : "sent",
+  "type" : "icon"
+}, {
+  "id" : "14219560-12a2-44cf-bd39-6ed1262d524f",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "iconName" : "\uD83D\uDC4D",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "iconPath" : "assets/like.png",
+  "timestamp" : "2026-05-30T04:02:33.114765117",
+  "tag" : "sent",
+  "type" : "icon"
+}, {
+  "id" : "f91d343e-2b30-4eef-b4dd-f2e5f9168a26",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "iconName" : "",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "iconPath" : "assets/emojis/face-blowing-a-kiss.png",
+  "timestamp" : "2026-05-30T04:02:35.76942892",
+  "tag" : "sent",
+  "type" : "icon"
+}, {
+  "id" : "7bdda67b-9e80-4943-a72b-d47acda0fcc1",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "iconName" : "",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "iconPath" : "assets/emojis/clown-face.png",
+  "timestamp" : "2026-05-30T04:03:43.766415515",
+  "tag" : "sent",
+  "type" : "icon"
+}, {
+  "id" : "2580d808-0f72-4476-833b-e1edcb484685",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "Hello bạn,\nbạn có khoaer hong",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T04:17:12.612825211",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "df0c4107-e994-4c0d-a4cb-21904ce90cf2",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "Yes, actually I'm feel so good\nHehe\n\nsadads",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T04:17:40.604429995",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "c044be4d-ec34-4f3a-b41f-766cd32e5a5b",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "Hehe, banj toi oiwssss",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T04:20:18.023489149",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "6c50adde-5185-405d-8408-c3a2d5c963a4",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "toi ne ban",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T04:20:23.686876263",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "deaeadbd-39c5-450b-b5df-1d6d2a89b0ed",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "Xin cahof",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T09:54:45.656934122",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "8ff7bbf9-7df0-420c-a251-49a2a1ea90d2",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "s",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T09:54:48.999171385",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "3fcdca9d-65de-421d-baed-c5313b311570",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "s",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T09:54:49.292592896",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "ab793106-6fc8-4dd8-a644-71d7fd6c0a2c",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "s",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T09:54:49.523920813",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "4cdeee9c-97df-4577-80fa-6ff5e981161c",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "s",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T09:54:49.729863173",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "75dceaaf-13d3-4056-9826-9726bdb19e47",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "s",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T09:54:49.943432221",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "686e2d0e-2b20-4af8-a8b0-3f12e198a2bc",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "s",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T09:54:50.198605948",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "6fc14cc2-f2ff-45eb-afbc-9cd0947557b4",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "s",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T09:54:50.420630713",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "fbc8cb06-55eb-43dc-ad4a-d1e5d01f979c",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "s",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T09:54:50.644439971",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "8724ea8f-0074-42db-a090-59abfb9d1ec2",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "s",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T09:54:50.922026085",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "fd350191-abcd-4e5e-aefc-d0a5956c5e01",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "aaaaA",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-30T20:28:01.329785954",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "96ceaea5-2908-429a-be14-e36aafeb0ed4",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "Hello",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-31T04:26:32.762537034",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "d09c2081-6909-4b7c-b089-146d8911222c",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "banj khoe khum\nMinh kha khoe nha",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-31T04:26:42.410165071",
+  "tag" : "sent",
+  "type" : "text"
+}, {
+  "id" : "6f6fede0-9aad-4e68-881e-f8e93778d1e0",
+  "dialogId" : "1370b4a9-9bc3-40b9-9906-5eadcd526180",
+  "content" : "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+  "senderId" : "e932ebdf-bd82-4330-84f8-1bae70967191",
+  "receiverId" : null,
+  "timestamp" : "2026-05-31T04:27:03.271191352",
+  "tag" : "sent",
+  "type" : "text"
 } ]

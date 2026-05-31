@@ -12,6 +12,7 @@ import java.awt.GridBagConstraints;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
@@ -19,6 +20,7 @@ import component.AppContext;
 import component.AppFrame;
 import domain.User;
 import util.LocalStorage;
+import util.PacketService;
 
 public class NavigationBar implements AppContext {
     private final Container parent;
@@ -115,19 +117,27 @@ public class NavigationBar implements AppContext {
         logoutButton.setIcon(logoutIcon);
         logoutButton.setFocusable(false);
         logoutButton.addActionListener(l -> {
-            AppFrame appFrame = AppFrame.getInstance();
 
-            appFrame.reset();
+            if (JOptionPane.showConfirmDialog(null,
+                    "Bạn có chắc muốn đăng xuất tài khoản không?", "Đăng xuất?",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
+                PacketService.closeConnection();
+                AppFrame appFrame = AppFrame.getInstance();
 
-            AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
+                appFrame.reset();
 
-            appFrame.setMinimumSize(loginContext.getSize());
-            appFrame.setSize(loginContext.getSize());
+                AppContext loginContext = appFrame.getContextPools().getContext("loginForm");
 
-            loginContext.draw();
+                appFrame.setMinimumSize(loginContext.getSize());
+                appFrame.setSize(loginContext.getSize());
 
-            appFrame.getContentPane().revalidate();
-            appFrame.getContentPane().repaint();
+                loginContext.draw();
+
+                appFrame.getContentPane().revalidate();
+                appFrame.getContentPane().repaint();
+            }
+
         });
     }
 

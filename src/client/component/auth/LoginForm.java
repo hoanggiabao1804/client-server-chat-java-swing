@@ -381,40 +381,9 @@ public class LoginForm implements AppContext {
             }
 
             if (!hasErrors) {
-                // String authenticatedResult =
-                // Authentication.getInstance().authenticate(this.username, this.password);
-                // if (authenticatedResult.isEmpty()) {
-                // MainMenu mainMenu = (MainMenu)
-                // AppFrame.getInstance().getContextPools().getContext("mainMenu");
-                // mainMenu.loadUser();
-                // this.reset();
-                // this.switchContext("mainMenu");
-                // } else {
-                // JOptionPane.showMessageDialog(null, authenticatedResult, "Đăng nhập không
-                // thành công",
-                // JOptionPane.ERROR_MESSAGE);
-                // }
-
-                loginForm.setEnabled(false);
+                submitButton.setEnabled(false);
                 countDownLatch = new CountDownLatch(1);
                 PacketService.authentication(username, password);
-                // loginForm.setEnabled(false);
-                // try {
-                // boolean success = countDownLatch.await(5, TimeUnit.SECONDS);
-                // if (success) {
-                // System.out.println("Ok!");
-                // } else {
-                // System.out.println("Not Ok!");
-                // loginForm.setEnabled(true);
-                // JOptionPane.showMessageDialog(null, "Server không phản hồi!", "Đăng nhập
-                // không thành công",
-                // JOptionPane.ERROR_MESSAGE);
-                // }
-
-                // } catch (InterruptedException e1) {
-                // System.out.println("Errors happened");
-                // e1.printStackTrace();
-                // }
 
                 new Thread(() -> {
                     try {
@@ -422,7 +391,7 @@ public class LoginForm implements AppContext {
 
                         if (!success) {
                             SwingUtilities.invokeLater(() -> {
-                                loginForm.setEnabled(true);
+                                submitButton.setEnabled(true);
                                 JOptionPane.showMessageDialog(
                                         null,
                                         "Đăng nhập không thành công",
@@ -478,7 +447,7 @@ public class LoginForm implements AppContext {
 
     public synchronized void getResponse(AuthResponse authResponse) {
         countDownLatch.countDown();
-        loginForm.setEnabled(true);
+        submitButton.setEnabled(true);
         if (authResponse.getStatus().equals("success")) {
             MainMenu mainMenu = (MainMenu) AppFrame.getInstance().getContextPools().getContext("mainMenu");
             mainMenu.loadUser();
