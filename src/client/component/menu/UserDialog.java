@@ -89,7 +89,6 @@ public class UserDialog implements AppContext {
 
     // Font & Color
     private Font headerFont;
-    private Font textFont;
     private Color messageColor;
 
     // Containers section
@@ -137,7 +136,6 @@ public class UserDialog implements AppContext {
 
         // Font & Color
         this.headerFont = new Font("Consolas", Font.BOLD, 20);
-        this.textFont = new Font("Consolas", Font.PLAIN, 15);
         this.messageColor = new Color(53, 155, 164);
 
         // Containers initialization
@@ -672,7 +670,6 @@ public class UserDialog implements AppContext {
         wrapper.setOpaque(false);
         wrapper.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        Dimension itemSize = null;
         JComponent item = null;
 
         if (message instanceof TextMessage) {
@@ -727,7 +724,6 @@ public class UserDialog implements AppContext {
         item.setAlignmentY(Component.CENTER_ALIGNMENT);
 
         item.setToolTipText(message.getTimestamp().format(dateTimeFormatter));
-        itemSize = item.getPreferredSize();
 
         JPanel rowPanel = new JPanel();
         rowPanel.setOpaque(false);
